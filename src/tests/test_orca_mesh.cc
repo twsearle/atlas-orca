@@ -114,6 +114,7 @@ CASE( "test orca mesh halo" ) {
     }
 }
 
+
 //-----------------------------------------------------------------------------
 
 // WORK IN PROGRESS: The routine in Atlas should be incorporating the following when

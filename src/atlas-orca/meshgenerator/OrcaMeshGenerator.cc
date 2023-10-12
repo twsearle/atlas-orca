@@ -14,9 +14,11 @@
 #include <numeric>
 #include <tuple>
 #include <utility>
+#include <sstream>
 
 #include "eckit/utils/Hash.h"
 
+#include "atlas/runtime/Log.h"
 #include "atlas/array/Array.h"
 #include "atlas/array/ArrayView.h"
 #include "atlas/array/IndexView.h"
@@ -266,7 +268,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     Configuration SR_cfg;
     SR_cfg.mypart = mypart_;
-    SR_cfg.nparts = nparts_;
     SurroundingRectangle SR( grid, distribution, SR_cfg );
 
 
@@ -297,6 +298,9 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         return glbarray_offset + j * glbarray_jstride + i;
     };
 
+    std::string partitioner_name = distribution.type();
+    const bool serial_distribution = (nparts == 1 || partitioner_name == "serial");
+    std::stringstream dbg;
 
     auto partition = [&]( idx_t i, idx_t j ) -> int {
         if ( nparts == 1 ) {
@@ -316,7 +320,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     int nnodes = SR.nb_nodes;
     int ncells = SR.nb_cells;
 
-    if ( nparts == 1 ) {
+    if ( serial_distribution ) {
         ATLAS_ASSERT( ( nx_halo_WE * ny_halo_NS ) == nnodes );
     }
 
@@ -440,6 +444,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     // part and remote_idx
                     nodes.part( inode )           = SR.parts[ii];
                     nodes.remote_idx( inode )     = inode;
+                    //if (inode == 0)
+                    //  dbg << "\n nodes.remote_idx(0) " << nodes.remote_idx(0);
                     nodes.master_glb_idx( inode ) = nodes.glb_idx( inode );
                     if ( nodes.ghost( inode ) ) {
                         gidx_t master_idx             = orca.periodicIndex( ix_glb, iy_glb );
@@ -448,7 +454,9 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                         orca.index2ij( master_idx, master_i, master_j );
                         nodes.part( inode ) = partition( master_i, master_j );
                         flags.set( Topology::GHOST );
-                        nodes.remote_idx( inode ) = nparts_ == 1 ? master_idx : -1;
+                        nodes.remote_idx( inode ) = serial_distribution ? master_idx : -1;
+                        //if (inode == 0)
+                        //  dbg << "\n " << partitioner_name << " nparts_ " << nparts_ << " master_idx " << master_idx;
 
                         if( nodes.glb_idx(inode) != nodes.master_glb_idx(inode) ) {
                             if ( ix_glb >= nx - orca.haloWest() ) {
@@ -482,6 +490,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                             }
 
                         }
+                      // if (inode == 0) dbg << "\n end of is_ghost nodes.remote_idx(0) " << nodes.remote_idx(0) << "\n";
 
                     }
 
@@ -517,6 +526,24 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                             return 0;
                         }
                     }();
+                    if (inode == 0) {
+                        dbg << "atlas-orca::meshgenerator::generator: node data inode = 0 \n"
+                            << "\n nodes.ij(0, XX) " <<  nodes.ij(0, XX)
+                            << "\n nodes.ij(0, YY) " <<  nodes.ij(0, YY)
+                            << "\n nodes.xy(0, LON) " <<  nodes.xy(0, LON)
+                            << "\n nodes.xy(0, LAT) " <<  nodes.xy(0, LAT)
+                            << "\n nodes.lonlat(0, LON) " <<  nodes.lonlat(0, LON)
+                            << "\n nodes.lonlat(0, LAT) " <<  nodes.lonlat(0, LAT)
+                            << "\n nodes.glb_idx(0) " <<  nodes.glb_idx(0)
+                            << "\n nodes.remote_idx(0) " <<  nodes.remote_idx(0)
+                            << "\n nodes.part(0) " <<  nodes.part(0)
+                            << "\n nodes.ghost(0) " <<  nodes.ghost(0)
+                            << "\n nodes.halo(0) " <<  nodes.halo(0)
+                            << "\n nodes.node_flags(0) " <<  nodes.node_flags(0)
+                            << "\n nodes.water(0) " <<  nodes.water(0)
+                            << "\n nodes.master_glb_idx(0) " <<  nodes.master_glb_idx(0)
+                            << std::endl;
+                    }
                 }
             }
         }
@@ -616,13 +643,22 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         }
     }
 
-    if( nparts_ == 1 ) {
+
+    if ( serial_distribution ) {
         // Bypass for "BuildParallelFields"
         mesh.nodes().metadata().set( "parallel", true );
+        if (mpi::rank() == 0) {
+            std::cout << mpi::rank() << " atlas-orca::OrcaMeshGenerator::generate:: nodes.metadata() " << mesh.nodes().metadata() << std::endl;
+            bool parallel = false;
+            mesh.nodes().metadata().get("parallel", parallel);
+            std::cout << mpi::rank() << " atlas-orca::OrcaMeshGenerator::generate:: parallel = " << parallel  << std::endl;
+        }
 
         // Bypass for "BuildPeriodicBoundaries"
         mesh.metadata().set( "periodic", true );
     }
+
+    ATLAS_DEBUG(dbg.str());
 
     mesh.nodes().metadata().set<size_t>( "NbRealPts", nnodes );
     mesh.nodes().metadata().set<size_t>( "NbVirtualPts", size_t( 0 ) );

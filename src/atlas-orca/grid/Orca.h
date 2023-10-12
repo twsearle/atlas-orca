@@ -18,12 +18,10 @@
 #include "atlas/runtime/Exception.h"
 #include "atlas/util/Config.h"
 #include "atlas/util/Point.h"
+#include "atlas-orca/util/OrcaPeriodicity.h"
 
 namespace atlas {
 class Mesh;
-namespace orca {
-class OrcaPeriodicity;
-}
 }  // namespace atlas
 namespace eckit {
 class PathName;
@@ -199,6 +197,8 @@ public:
     bool invalidElement( idx_t i, idx_t j ) const { return invalid_element_[( imin_ + i ) + ( jmin_ + j ) * jstride_]; }
 
     gidx_t periodicIndex( idx_t i, idx_t j ) const;
+
+    orca::OrcaPeriodicity periodicity() const { return (*periodicity_); }
 
     void index2ij( gidx_t gidx, idx_t& i, idx_t& j ) const {
         //gidx = jstride_ * (jmin_+j) + (imin_+i);

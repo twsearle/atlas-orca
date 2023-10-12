@@ -62,6 +62,8 @@ public:
         }
         return master;
     }
+
+    std::array<double, 2> pivot() const { return pivot_; }
 };
 
 }  // namespace orca

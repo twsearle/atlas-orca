@@ -27,6 +27,12 @@ ecbuild_add_test( TARGET  atlas_test_orca_mesh
                   ENVIRONMENT ${ATLAS_TEST_ENVIRONMENT}
                   CONDITION eckit_HAVE_LZ4 )
 
+ecbuild_add_test( TARGET  atlas_test_orca_periodicity
+                  SOURCES test_orca_periodicity.cc
+                  LIBS    atlas-orca
+                  ENVIRONMENT ${ATLAS_TEST_ENVIRONMENT}
+                  CONDITION eckit_HAVE_LZ4 )
+
 ecbuild_add_test( TARGET  atlas_test_orca_valid_elements
                   SOURCES test_orca_valid_elements.cc
                   LIBS    atlas-orca
@@ -36,7 +42,6 @@ ecbuild_add_test( TARGET  atlas_test_orca_valid_elements
 ecbuild_add_test( TARGET  atlas_test_orca_polygon_locator
                   SOURCES test_orca_polygon_locator.cc
                   LIBS    atlas-orca
-                  MPI     2
                   ENVIRONMENT ${ATLAS_TEST_ENVIRONMENT}
                   CONDITION eckit_HAVE_LZ4 AND eckit_HAVE_MPI)
 
