@@ -35,6 +35,17 @@ namespace atlas {
 namespace orca {
 namespace meshgenerator {
 
+// BAD CHECKERBOARD ORCA2_T MPI 2 POINTS
+//const int64_t TEST_MASTER_GLOBAL_IDX = 26664;
+//const int64_t TEST_MASTER_GLOBAL_IDX = 26580;
+//const int64_t TEST_MASTER_GLOBAL_IDX = 26575;
+//const int64_t TEST_MASTER_GLOBAL_IDX = 26757;
+const int64_t TEST_MASTER_GLOBAL_IDX = -1;
+//
+const int64_t TEST_REMOTE_IDX = 13287;
+const int64_t TEST_PARTITION = -1;
+
+
 //----------------------------------------------------------------------------------------------------------------------
 
 class OrcaMeshGenerator : public MeshGenerator::Implementation {

@@ -203,7 +203,6 @@ struct Nodes {
     array::ArrayView<int, 1> halo;
     array::ArrayView<int, 1> node_flags;
     array::ArrayView<int, 1> water;
-    //array::ArrayView<int, 1> core;
     array::ArrayView<gidx_t, 1> master_glb_idx;
 
     util::detail::BitflagsView<int> flags( idx_t i ) { return util::Topology::view( node_flags( i ) ); }
@@ -221,8 +220,6 @@ struct Nodes {
         node_flags{array::make_view<int, 1>( mesh.nodes().flags() )},
         water{array::make_view<int, 1>( mesh.nodes().add(
             Field( "water", array::make_datatype<int>(), array::make_shape( mesh.nodes().size() ) ) ) )},
-        //core{array::make_view<int, 1>( mesh.nodes().add(
-        //    Field( "core", array::make_datatype<int>(), array::make_shape( mesh.nodes().size() ) ) ) )},
         master_glb_idx{array::make_view<gidx_t, 1>( mesh.nodes().add( Field(
             "master_global_index", array::make_datatype<gidx_t>(), array::make_shape( mesh.nodes().size() ) ) ) )} {}
 };
@@ -437,52 +434,78 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     nodes.lonlat( inode, LON ) = _xy[LON];
                     nodes.lonlat( inode, LAT ) = _xy[LAT];
 
-                    // part and remote_idx
                     nodes.part( inode )           = SR.parts[ii];
                     nodes.remote_idx( inode )     = inode;
                     nodes.master_glb_idx( inode ) = nodes.glb_idx( inode );
-                    if ( nodes.ghost( inode ) ) {
-                        gidx_t master_idx             = orca.periodicIndex( ix_glb, iy_glb );
-                        nodes.master_glb_idx( inode ) = master_idx + 1;
-                        idx_t master_i, master_j;
-                        orca.index2ij( master_idx, master_i, master_j );
-                        nodes.part( inode ) = partition( master_i, master_j );
-                        flags.set( Topology::GHOST );
-                        nodes.remote_idx( inode ) = serial_distribution ? master_idx : -1;
 
-                        if( nodes.glb_idx(inode) != nodes.master_glb_idx(inode) ) {
-                            if ( ix_glb >= nx - orca.haloWest() ) {
-                                flags.set( Topology::PERIODIC );
-                            }
-                            else if ( ix_glb < orca.haloEast() - 1 ) {
-                                flags.set( Topology::PERIODIC );
-                            }
-                            if ( iy_glb >= ny - orca.haloNorth() - 1 ) {
-                                flags.set( Topology::PERIODIC );
-                                if( _xy[LON] > lon00 + 90. ) {
-                                    flags.set( Topology::EAST );
-                                }
-                                else {
-                                    flags.set( Topology::WEST );
-                                }
-                            }
+                    // set TOPOLOGY::PERIODIC
+                    {
+                      if ( nodes.ghost( inode ) ) {
+                          gidx_t master_idx             = orca.periodicIndex( ix_glb, iy_glb );
+                          nodes.master_glb_idx( inode ) = master_idx + 1;
+                          idx_t master_i, master_j;
+                          orca.index2ij( master_idx, master_i, master_j );
+                          nodes.part( inode ) = partition( master_i, master_j );
+                          flags.set( Topology::GHOST );
+                          nodes.remote_idx( inode ) = serial_distribution ? master_idx : -1;
 
-                            if( flags.check( Topology::PERIODIC ) ) {
-                                // It can still happen that nodes were flagged as periodic wrongly
-                                // e.g. where the grid folds into itself
+                          if( nodes.glb_idx(inode) != nodes.master_glb_idx(inode) ) {
+                              if ( ix_glb >= nx - orca.haloWest() ) {
+                                  flags.set( Topology::PERIODIC );
+                              }
+                              else if ( ix_glb < orca.haloEast() - 1 ) {
+                                  flags.set( Topology::PERIODIC );
+                              }
+                              if ( iy_glb >= ny - orca.haloNorth() - 1 ) {
+                                  flags.set( Topology::PERIODIC );
+                                  if( _xy[LON] > lon00 + 90. ) {
+                                      flags.set( Topology::EAST );
+                                  }
+                                  else {
+                                      flags.set( Topology::WEST );
+                                  }
+                              }
 
-                                idx_t iy_glb_master;
-                                double xy_master[2];
-                                orca.index2ij( master_idx, ix_glb_master, iy_glb_master );
-                                orca.lonlat(ix_glb_master,iy_glb_master,xy_master);
-                                normalise( xy_master );
-                                if( std::abs(xy_master[LON] - _xy[LON]) < 1.e-12 ) {
-                                    flags.unset(Topology::PERIODIC);
-                                }
-                            }
+                              if( flags.check( Topology::PERIODIC ) ) {
+                                  // It can still happen that nodes were flagged as periodic wrongly
+                                  // e.g. where the grid folds into itself
 
-                        }
+                                  idx_t iy_glb_master;
+                                  double xy_master[2];
+                                  orca.index2ij( master_idx, ix_glb_master, iy_glb_master );
+                                  orca.lonlat(ix_glb_master,iy_glb_master,xy_master);
+                                  normalise( xy_master );
+                                  if( std::abs(xy_master[LON] - _xy[LON]) < 1.e-12 ) {
+                                      flags.unset(Topology::PERIODIC);
+                                  }
+                              }
+                          }
+                          if (nodes.master_glb_idx(inode) == TEST_MASTER_GLOBAL_IDX) {
+                                  std::cout << "[" << mypart_ << "] not set periodic flag " << inode
+                                            << " master_glb_idx " << nodes.master_glb_idx(inode)
+                                            << " glb_idx " << nodes.glb_idx(inode)
+                                            << " partition " << nodes.part(inode)
+                                            << (flags.check( Topology::PERIODIC ) ? " Topology::PERIODIC " : "")
+                                            << (flags.check( Topology::BC ) ? " Topology::BC " : "")
+                                            << (flags.check( Topology::EAST ) ? " Topology::EAST " : "")
+                                            << (flags.check( Topology::WEST ) ? " Topology::WEST " : "")
+                                            << (flags.check( Topology::GHOST ) ? " Topology::GHOST " : "")
+                                            << std::endl;
+                         }
+                      }
+                    }
 
+                    if ((mypart_ == TEST_PARTITION) && (nodes.remote_idx(inode) == TEST_REMOTE_IDX)) {
+                      std::cout << "[" << mypart_ << "] remote point test " << inode
+                                << " master_glb_idx " << nodes.master_glb_idx(inode)
+                                << " glb_idx " << nodes.glb_idx(inode)
+                                << " partition " << nodes.part(inode)
+                                << (flags.check( Topology::PERIODIC ) ? " Topology::PERIODIC " : "")
+                                << (flags.check( Topology::BC ) ? " Topology::BC " : "")
+                                << (flags.check( Topology::EAST ) ? " Topology::EAST " : "")
+                                << (flags.check( Topology::WEST ) ? " Topology::WEST " : "")
+                                << (flags.check( Topology::GHOST ) ? " Topology::GHOST " : "")
+                                << std::endl;
                     }
 
                     flags.set( orca.land( ix_glb, iy_glb ) ? Topology::LAND : Topology::WATER );
@@ -495,7 +518,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     }
 
                     nodes.water( inode ) = orca.water( ix_glb, iy_glb );
-                    //nodes.core( inode ) = not orca.ghost( ix_glb, iy_glb );
                     nodes.halo( inode ) = [&]() -> int {
                         if ( ix_glb < 0 ) {
                             return -ix_glb;
