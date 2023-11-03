@@ -17,6 +17,7 @@
 #include "atlas/meshgenerator.h"
 #include "atlas-orca/meshgenerator/OrcaMeshGenerator.h"
 #include "atlas/util/Config.h"
+#include "atlas/util/function/VortexRollup.h"
 #include "atlas/output/Gmsh.h"
 
 #include "atlas/util/Geometry.h"
@@ -36,7 +37,6 @@ namespace test {
 
 //-----------------------------------------------------------------------------
 
-void build_periodic_boundaries( Mesh& mesh );
 void build_remote_index(Mesh& mesh);
 
 //-----------------------------------------------------------------------------
@@ -45,8 +45,11 @@ void build_remote_index(Mesh& mesh);
 CASE( "test haloExchange " ) {
     auto gridnames = std::vector<std::string>{
         "ORCA2_T",   //
-        //"eORCA1_T",  //
-        //"eORCA025_T",  //
+//        "ORCA2_U",   //
+//        "ORCA2_V",   //
+        "eORCA1_T",  //
+//        "eORCA025_T",  //
+//        "eORCA12_T",  //
     };
     for ( auto gridname : gridnames ) {
         for ( int64_t halo =0; halo < 1; ++halo ) {
@@ -55,10 +58,9 @@ CASE( "test haloExchange " ) {
                 auto meshgen_config = grid.meshgenerator() | option::halo(halo);
                 atlas::MeshGenerator meshgen(meshgen_config);
                 auto partitioner_config = grid.partitioner();
-                partitioner_config.set("type", "checkerboard");
+                partitioner_config.set("type", "serial");
                 auto partitioner = grid::Partitioner(partitioner_config);
                 auto mesh = meshgen.generate(grid, partitioner);
-                //test::build_periodic_boundaries( mesh );
                 test::build_remote_index ( mesh );
                 //// Bypass for "BuildParallelFields"
                 //mesh.nodes().metadata().set( "parallel", true );
@@ -77,18 +79,20 @@ CASE( "test haloExchange " ) {
                 auto f2        = array::make_view<double, 1>( field2 );
                 const auto ghosts = atlas::array::make_view<int32_t, 1>(
                                       mesh.nodes().ghost());
+                const auto lonlat = array::make_view<double, 2>( mesh.nodes().lonlat() );
                 for ( idx_t jnode = 0; jnode < mesh.nodes().size(); ++jnode ) {
                     if (ghosts(jnode)) {
-                        f( jnode ) = 1;
-                    } else {
                         f( jnode ) = 0;
+                    } else {
+                        const double lon = lonlat(jnode, 0);
+                        const double lat = lonlat(jnode, 1);
+                        f( jnode ) = util::function::vortex_rollup(lon, lat, 0.0);
                     }
                 }
 
                 fs.haloExchange(field);
 
                 const auto xy = array::make_view<double, 2>( mesh.nodes().xy() );
-                const auto lonlat = array::make_view<double, 2>( mesh.nodes().lonlat() );
                 const auto glb_idxs = array::make_indexview<int64_t, 1>(mesh.nodes().global_index());
                 const auto partition = array::make_view<int32_t, 1>( mesh.nodes().partition() );
                 const auto halos = array::make_view<int32_t, 1>( mesh.nodes().halo() );
@@ -98,7 +102,10 @@ CASE( "test haloExchange " ) {
 
                 for ( idx_t jnode = 0; jnode < mesh.nodes().size(); ++jnode ) {
                     f2(jnode) = 0;
-                    if (f( jnode )) {
+                    const double lon = lonlat(jnode, 0);
+                    const double lat = lonlat(jnode, 1);
+                    //if (f( jnode )) {
+                    if( f(jnode) != util::function::vortex_rollup(lon, lat, 0.0)) {
                       ++count;
                     }
                     if (master_glb_idxs(jnode) == atlas::orca::meshgenerator::TEST_MASTER_GLOBAL_IDX) {
@@ -136,178 +143,6 @@ CASE( "test haloExchange " ) {
             }
         }
     }
-}
-
-void build_periodic_boundaries( Mesh& mesh ) {
-    using util::LonLatMicroDeg;
-    using util::PeriodicTransform;
-    using util::Topology;
-
-    ATLAS_TRACE();
-    bool periodic = false;
-    mesh.metadata().get( "periodic", periodic );
-
-    auto mpi_size = mpi::size();
-    auto mypart   = mpi::rank();
-
-    if ( !periodic ) {
-        mesh::Nodes& nodes = mesh.nodes();
-
-        auto flags_v = array::make_view<int, 1>( nodes.flags() );
-        auto ridx    = array::make_indexview<idx_t, 1>( nodes.remote_index() );
-        auto part    = array::make_view<int, 1>( nodes.partition() );
-        auto ghost   = array::make_view<int, 1>( nodes.ghost() );
-
-        int nb_nodes = nodes.size();
-
-        auto xy = array::make_view<double, 2>( nodes.xy() );
-        auto ij = array::make_view<idx_t, 2>( nodes.field( "ij" ) );
-
-        // Identify my master and slave nodes on own partition
-        // master nodes are at x=0,  slave nodes are at x=2pi
-        std::map<uid_t, int> master_lookup;
-        std::map<uid_t, int> slave_lookup;
-        std::vector<int> master_nodes;
-        master_nodes.reserve( 3 * nb_nodes );
-        std::vector<int> slave_nodes;
-        slave_nodes.reserve( 3 * nb_nodes );
-
-        auto collect_slave_and_master_nodes = [&]() {
-            std::cout << "[" << mypart << "] collect_slave_and_master_nodes" << std::endl;
-            auto master_glb_idx = array::make_view<gidx_t, 1>( mesh.nodes().field( "master_global_index" ) );
-            auto glb_idx        = array::make_view<gidx_t, 1>( mesh.nodes().global_index() );
-            for ( idx_t jnode = 0; jnode < nodes.size(); ++jnode ) {
-                auto flags = Topology::view( flags_v( jnode ) );
-                if ( flags.check( Topology::PERIODIC ) ) {
-                    if ( master_glb_idx( jnode ) == glb_idx( jnode ) ) {
-                        if ( part( jnode ) == mypart ) {
-                            master_lookup[master_glb_idx( jnode )] = jnode;
-                            master_nodes.push_back( master_glb_idx( jnode ) );
-                            master_nodes.push_back( 0 );
-                            master_nodes.push_back( jnode );
-                            if (master_glb_idx(jnode) == atlas::orca::meshgenerator::TEST_MASTER_GLOBAL_IDX) {
-                              std::cout << "[" << mypart << "] master node " << jnode
-                                        << " master_glb_idx " << master_glb_idx(jnode)
-                                        << " glb_idx " << glb_idx(jnode)
-                                        << " partition " << part(jnode) << std::endl;
-                            }
-                        } else if (master_glb_idx(jnode) == atlas::orca::meshgenerator::TEST_MASTER_GLOBAL_IDX) {
-                              std::cout << "[" << mypart << "] master node not on my partition " << jnode
-                                        << " master_glb_idx " << master_glb_idx(jnode)
-                                        << " glb_idx " << glb_idx(jnode)
-                                        << " partition " << part(jnode) << std::endl;
-                        }
-                    } else {
-                        slave_lookup[master_glb_idx( jnode )] = jnode;
-                        slave_nodes.push_back( master_glb_idx( jnode ) );
-                        slave_nodes.push_back( 0 );
-                        slave_nodes.push_back( jnode );
-                        ridx( jnode ) = -1;
-                        if (master_glb_idx(jnode) == atlas::orca::meshgenerator::TEST_MASTER_GLOBAL_IDX) {
-                          std::cout << "[" << mypart << "] slave node " << jnode
-                                    << " master_glb_idx " << master_glb_idx(jnode)
-                                    << " glb_idx " << glb_idx(jnode)
-                                    << " partition " << part(jnode) << std::endl;
-                        }
-                    }
-                } else if (master_glb_idx(jnode) == atlas::orca::meshgenerator::TEST_MASTER_GLOBAL_IDX) {
-                  std::cout << "[" << mypart << "] non-periodic point " << jnode
-                            << " master_glb_idx " << master_glb_idx(jnode)
-                            << " glb_idx " << glb_idx(jnode)
-                            << " partition " << part(jnode)
-                            << (flags.check( Topology::PERIODIC ) ? " Topology::PERIODIC " : "")
-                            << (flags.check( Topology::BC ) ? " Topology::BC " : "")
-                            << (flags.check( Topology::EAST ) ? " Topology::EAST " : "")
-                            << (flags.check( Topology::WEST ) ? " Topology::WEST " : "")
-                            << (flags.check( Topology::GHOST ) ? " Topology::GHOST " : "")
-                            << std::endl;
-                }
-            }
-        };
-
-        collect_slave_and_master_nodes();
-
-        std::vector<std::vector<int>> found_master( mpi_size );
-        std::vector<std::vector<int>> send_slave_idx( mpi_size );
-
-        // Find masters on other tasks to send to me
-        {
-            int sendcnt = slave_nodes.size();
-            std::vector<int> recvcounts( mpi_size );
-
-            ATLAS_TRACE_MPI( ALLGATHER ) { mpi::comm().allGather( sendcnt, recvcounts.begin(), recvcounts.end() ); }
-
-            std::vector<int> recvdispls( mpi_size );
-            recvdispls[0] = 0;
-            int recvcnt   = recvcounts[0];
-            for ( idx_t jproc = 1; jproc < mpi_size; ++jproc ) {
-                recvdispls[jproc] = recvdispls[jproc - 1] + recvcounts[jproc - 1];
-                recvcnt += recvcounts[jproc];
-            }
-            std::vector<int> recvbuf( recvcnt );
-
-            ATLAS_TRACE_MPI( ALLGATHER ) {
-                mpi::comm().allGatherv( slave_nodes.begin(), slave_nodes.end(), recvbuf.begin(), recvcounts.data(),
-                                        recvdispls.data() );
-            }
-
-            PeriodicTransform transform;
-            for ( idx_t jproc = 0; jproc < mpi_size; ++jproc ) {
-                found_master.reserve( master_nodes.size() );
-                send_slave_idx.reserve( master_nodes.size() );
-                array::LocalView<int, 2> recv_slave( recvbuf.data() + recvdispls[jproc],
-                                                     array::make_shape( recvcounts[jproc] / 3, 3 ) );
-                for ( idx_t jnode = 0; jnode < recv_slave.shape( 0 ); ++jnode ) {
-                    uid_t slave_uid;
-                    slave_uid = recv_slave( jnode, 0 );
-                    if ( master_lookup.count( slave_uid ) ) {
-                        int master_idx = master_lookup[slave_uid];
-                        int slave_idx  = recv_slave( jnode, 2 );
-                        found_master[jproc].push_back( master_idx );
-                        send_slave_idx[jproc].push_back( slave_idx );
-                    }
-                }
-            }
-        }
-
-        // Fill in data to communicate
-        std::vector<std::vector<int>> recv_slave_idx( mpi_size );
-        std::vector<std::vector<int>> send_master_part( mpi_size );
-        std::vector<std::vector<int>> recv_master_part( mpi_size );
-        std::vector<std::vector<int>> send_master_ridx( mpi_size );
-        std::vector<std::vector<int>> recv_master_ridx( mpi_size );
-
-        {
-            for ( idx_t jproc = 0; jproc < mpi_size; ++jproc ) {
-                idx_t nb_found_master = static_cast<idx_t>( found_master[jproc].size() );
-                send_master_part[jproc].resize( nb_found_master );
-                send_master_ridx[jproc].resize( nb_found_master );
-                for ( idx_t jnode = 0; jnode < nb_found_master; ++jnode ) {
-                    int loc_idx                    = found_master[jproc][jnode];
-                    send_master_part[jproc][jnode] = part( loc_idx );
-                    send_master_ridx[jproc][jnode] = loc_idx;
-                }
-            }
-        }
-
-        // Communicate
-        ATLAS_TRACE_MPI( ALLTOALL ) {
-            mpi::comm().allToAll( send_slave_idx, recv_slave_idx );
-            mpi::comm().allToAll( send_master_part, recv_master_part );
-            mpi::comm().allToAll( send_master_ridx, recv_master_ridx );
-        }
-
-        // Fill in periodic
-        for ( idx_t jproc = 0; jproc < mpi_size; ++jproc ) {
-            idx_t nb_recv = static_cast<idx_t>( recv_slave_idx[jproc].size() );
-            for ( idx_t jnode = 0; jnode < nb_recv; ++jnode ) {
-                idx_t slave_idx   = recv_slave_idx[jproc][jnode];
-                part( slave_idx ) = recv_master_part[jproc][jnode];
-                ridx( slave_idx ) = recv_master_ridx[jproc][jnode];
-            }
-        }
-    }
-    mesh.metadata().set( "periodic", true );
 }
 
 
