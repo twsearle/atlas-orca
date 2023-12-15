@@ -59,7 +59,8 @@ CASE( "test haloExchange " ) {
 
     for ( auto distributionName : distributionNames ) {
         for ( auto gridname : gridnames ) {
-            for ( int64_t halo = 0; halo < 1; ++halo ) {
+            for ( int64_t halo = 0; halo < 2; ++halo ) {
+                if ( (halo == 1) && (distributionName == "serial") ) continue;
                 SECTION( gridname + "_" + distributionName + "_halo" + std::to_string(halo) ) {
                     auto grid = Grid(gridname);
                     auto meshgen_config = grid.meshgenerator() | option::halo(halo);
@@ -127,12 +128,12 @@ CASE( "test haloExchange " ) {
                     if ( count != 0 ) {
                         Log::info() << "count nonzero and norm of differences is: " << std::sqrt(sumSquares) << std::endl;
                         Log::info() << "To diagnose problem, uncomment mesh writing here: " << Here() << std::endl;
-                        // output::Gmsh gmsh(
-                        //     std::string("haloExchange_")+gridname+"_"+distributionName+"_"+std::to_string(halo)+".msh",
-                        //     Config("coordinates","ij")|Config("info",true));
-                        // gmsh.write(mesh);
-                        // gmsh.write(field);
-                        // gmsh.write(field2);
+                        output::Gmsh gmsh(
+                            std::string("haloExchange_")+gridname+"_"+distributionName+"_"+std::to_string(halo)+".msh",
+                            Config("coordinates","ij")|Config("info",true));
+                        gmsh.write(mesh);
+                        gmsh.write(field);
+                        gmsh.write(field2);
                     }
                     EXPECT_EQ( count, 0 );
                 }
