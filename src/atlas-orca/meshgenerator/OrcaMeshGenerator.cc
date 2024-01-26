@@ -58,8 +58,8 @@ struct Configuration {
 struct SurroundingRectangle {
     std::vector<int> parts;
     std::vector<int> is_ghost;
-    // WARNING vector<bool> is not thread-safe, don't assign in parallel region
-    std::vector<bool> is_node;
+    // WARNING vector<bool> is not thread-safe use char as OMP safe boolean type
+    std::vector<char> is_node;
     int size;
     int nx;
     int ny;
@@ -626,13 +626,13 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     // Degenerate points in the ORCA mesh mean that the standard BuildHalo
     // methods for updating halo sizes will not work.
-    mesh.metadata().set( "halo_locked", true );
+    //mesh.metadata().set("halo_locked", true);
     mesh.nodes().metadata().set( "NbRealPts", static_cast<size_t>( nnodes ) );
     mesh.nodes().metadata().set( "NbVirtualPts", static_cast<size_t>( 0 ) );
 }
 
 using Unique2Node = std::map<gidx_t, idx_t>;
-void OrcaMeshGenerator::build_remote_index( Mesh& mesh ) {
+void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
     ATLAS_TRACE();
 
     mesh::Nodes& nodes = mesh.nodes();
@@ -727,6 +727,7 @@ void OrcaMeshGenerator::build_remote_index( Mesh& mesh ) {
                                               std::to_string( jnode ) );
     }
 
+    mesh.metadata().set( "halo", 0); // test the atlas BuildHalo halo_ );
     mesh.metadata().set( "periodic", true );
     nodes.metadata().set( "parallel", true );
 }
@@ -735,16 +736,17 @@ OrcaMeshGenerator::OrcaMeshGenerator( const eckit::Parametrisation& config ) {
     config.get( "partition", mypart_ = mpi::rank() );
     config.get( "partitions", nparts_ = mpi::size() );
     config.get( "halo", halo_ = 0 );
-    if ( halo_ != 0 ) {
-        throw_NotImplemented( "Only 0 halo ORCA grids are currently supported", Here() );
-    }
+    if (halo_ < 0 || halo_ > 1)
+      throw_NotImplemented("Only halo sizes 0 or 1 ORCA grids are currently supported", Here());
 }
 
 void OrcaMeshGenerator::generate( const Grid& grid, const grid::Partitioner& partitioner, Mesh& mesh ) const {
-    std::unordered_set<std::string> valid_distributions = { "serial", "checkerboard", "equal_regions", "equal_area" };
-    ATLAS_ASSERT( valid_distributions.find( partitioner.type() ) != valid_distributions.end(),
-                  partitioner.type() + " is not an implemented distribution type. " +
-                      "Valid types are 'serial', 'checkerboard' or 'equal_regions', 'equal_area'" );
+    std::unordered_set<std::string> valid_distributions = {"serial", "checkerboard", "equal_regions", "equal_area"};
+    ATLAS_ASSERT(valid_distributions.find(partitioner.type()) != valid_distributions.end(),
+                 partitioner.type() + " is not an implemented distribution type. "
+                 + "Valid types are 'serial', 'checkerboard' or 'equal_regions', 'equal_area'");
+    if (partitioner.type() == "serial" && halo_ > 1)
+      throw_NotImplemented("halo size must be zero for 'serial' distribution type ORCA grids", Here());
     auto regular_grid = equivalent_regular_grid( grid );
     auto distribution = grid::Distribution( regular_grid, partitioner );
     generate( grid, distribution, mesh );

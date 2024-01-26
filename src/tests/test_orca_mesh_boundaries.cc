@@ -58,11 +58,13 @@ CASE( "test haloExchange " ) {
 
     for ( auto distributionName : distributionNames ) {
         for ( auto gridname : gridnames ) {
-            for ( int64_t halo = 0; halo < 1; ++halo ) {
-                SECTION( gridname + "_" + distributionName + "_halo" + std::to_string( halo ) ) {
-                    auto grid           = Grid( gridname );
-                    auto meshgen_config = grid.meshgenerator() | option::halo( halo );
-                    atlas::MeshGenerator meshgen( meshgen_config );
+            for ( int64_t halo = 0; halo < 2; ++halo ) {
+                if ( distributionName == "serial" && halo != 0 )
+                  continue;
+                SECTION( gridname + "_" + distributionName + "_halo" + std::to_string(halo) ) {
+                    auto grid = Grid(gridname);
+                    auto meshgen_config = grid.meshgenerator() | option::halo(halo);
+                    atlas::MeshGenerator meshgen(meshgen_config);
                     auto partitioner_config = grid.partitioner();
                     partitioner_config.set( "type", distributionName );
                     auto partitioner = grid::Partitioner( partitioner_config );
@@ -122,17 +124,16 @@ CASE( "test haloExchange " ) {
                             f2( jnode ) = 1;
                         }
                     }
-                    if ( count != 0 ) {
-                        Log::info() << "count nonzero and norm of differences is: " << std::sqrt( sumSquares )
-                                    << std::endl;
+                    //if ( count != 0 ) {
+                        Log::info() << "count nonzero and norm of differences is: " << std::sqrt(sumSquares) << std::endl;
                         Log::info() << "To diagnose problem, uncomment mesh writing here: " << Here() << std::endl;
-                        // output::Gmsh gmsh(
-                        //     std::string("haloExchange_")+gridname+"_"+distributionName+"_"+std::to_string(halo)+".msh",
-                        //     Config("coordinates","ij")|Config("info",true));
-                        // gmsh.write(mesh);
-                        // gmsh.write(field);
-                        // gmsh.write(field2);
-                    }
+                        output::Gmsh gmsh(
+                            std::string("haloExchange_")+gridname+"_"+distributionName+"_"+std::to_string(halo)+".msh",
+                            Config("coordinates","ij")|Config("info",true));
+                        gmsh.write(mesh);
+                        gmsh.write(field);
+                        gmsh.write(field2);
+                    //}
                     EXPECT_EQ( count, 0 );
                 }
             }
