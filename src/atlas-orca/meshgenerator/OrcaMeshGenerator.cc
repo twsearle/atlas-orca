@@ -15,6 +15,7 @@
 #include <tuple>
 #include <unordered_set>
 #include <utility>
+#include <fstream>
 
 #include "eckit/utils/Hash.h"
 
@@ -49,52 +50,117 @@
 
 namespace atlas::orca::meshgenerator {
 
+// ORCA2 interesting indices
+static const std::vector<std::pair<int, int>> glb_ij_pairs{
+    {0, 148},
+    {1, 148},
+    {0, 147},
+    {89, 148},
+    {90, 148},
+    {91, 148},
+    {92, 148},
+    {93, 148},
+    //89-90, 147
+    {89, 147},
+    {90, 147},
+    //92-101, 147
+    {92, 147},
+    {93, 147},
+    {94, 147},
+    {95, 147},
+    {96, 147},
+    {97, 147},
+    {98, 147},
+    {99, 147},
+    {100, 147},
+    {101, 147},
+    //89-90, 146
+    {89, 146},
+    {90, 146},
+    //180-181, 148
+    {180, 148},
+    {181, 148},
+    {181, 146},
+};
+
 
 struct Configuration {
     int nparts;
     int mypart;
+    int halosize;
 };
 
 struct SurroundingRectangle {
     std::vector<int> parts;
+    std::vector<int> halo;
     std::vector<int> is_ghost;
     // WARNING vector<bool> is not thread-safe use char as OMP safe boolean type
     std::vector<char> is_node;
     int size;
-    int nx;
-    int ny;
-    int ix_min;
-    int ix_max = 0;
-    int iy_min;
-    int iy_max = 0;
+    int nx, ny;
+    int halosize;
+    int ix_min, ix_max;
+    int iy_min, iy_max;
+    int nx_glb, ny_glb;
     int nb_nodes;
     int nb_cells;
-    int nb_nodes_owned = 0;
+    int nb_nodes_owned;
+    const grid::Distribution distribution_;
 
-    int index( int i, int j ) const { return j * nx + i; }
-    int index_sp( int i ) const { return nx * ny + i; }
+    int index( int i, int j ) const {
+      j += halosize;
+      i += halosize;
+      return j * (nx + 2*halosize) + i;
+    }
 
-    SurroundingRectangle( const Grid& grid, const grid::Distribution& distribution, const Configuration& cfg ) {
+    int partition( idx_t i, idx_t j ) {
+      // wrap the west/east periodic boundary for negative indices to id partition
+      if (i < 0) {
+          i = i + nx_glb - 1;
+      }
+      if (i > nx_glb - 1) {
+          i = i - nx_glb - 1;
+      }
+      // Clamp the north/south boundary points
+      // (these are much more tricky to deal with and require precise knowledge of the north south boundary conditions)
+      // TODO: add halo handling for north fold
+      if (j < 0) {
+        j = 0;
+      }
+      if (j > ny_glb - 1) {
+        j = ny_glb - 1;
+      }
+      return distribution_.partition( j * nx_glb + i );
+    }
+
+    SurroundingRectangle( const Grid& grid, const grid::Distribution& distribution, const Configuration& cfg )
+      : distribution_(distribution) {
         ATLAS_TRACE();
         OrcaGrid orca{ grid };
         int mypart     = cfg.mypart;
-        int nx_glb     = orca.nx();
-        int ny_glb     = orca.ny();
-        int ny_halo    = ny_glb + orca.haloNorth();
+        int nparts     = cfg.nparts;
+        halosize   = cfg.halosize;
+        nx_glb     = orca.nx();
+        ny_glb     = orca.ny();
+        int ny_orca_halo    = ny_glb + orca.haloNorth();
         int iy_glb_max = ny_glb + orca.haloNorth() - 1;
         int iy_glb_min = -orca.haloSouth();
         int ix_glb_max = nx_glb + orca.haloEast() - 1;
         int ix_glb_min = -orca.haloWest();
 
-        auto partition = [&]( idx_t i, idx_t j ) -> int {
-            auto clamp = []( idx_t value, idx_t lower, idx_t upper ) {
-                // in C++17 this is std::clamp
-                return std::max( lower, std::min( value, upper ) );
-            };
-            i = clamp( i, 0, nx_glb - 1 );
-            j = clamp( j, 0, ny_glb - 1 );
-            return distribution.partition( j * nx_glb + i );
-        };
+        std::ofstream logFile(distribution.type() + "-"
+                              + std::to_string(cfg.halosize) + "_p"
+                              + std::to_string(mypart) + ".log");
+
+        //auto partition = [&]( idx_t i, idx_t j ) -> int {
+        //    auto clamp = []( idx_t value, idx_t lower, idx_t upper ) {
+        //        // in C++17 this is std::clamp
+        //        return std::max( lower, std::min( value, upper ) );
+        //    };
+        //    i = clamp( i, 0, nx_glb - 1 );
+        //    j = clamp( j, 0, ny_glb - 1 );
+        //    return distribution.partition( j * nx_glb + i );
+        //};
 
         // determine rectangle (ix_min:ix_max) x (iy_min:iy_max) surrounding the nodes on this processor
         ix_min = nx_glb + 1;
@@ -104,30 +170,74 @@ struct SurroundingRectangle {
 
         {
             ATLAS_TRACE( "bounds" );
-            atlas_omp_parallel {
-                int ix_min_TP         = ix_min;
-                int ix_max_TP         = ix_max;
-                int iy_min_TP         = iy_min;
-                int iy_max_TP         = iy_max;
-                int nb_nodes_owned_TP = 0;
+            //atlas_omp_parallel {
+            //    int ix_min_TP = ix_min;
+            //    int ix_max_TP = ix_max;
+            //    int iy_min_TP = iy_min;
+            //    int iy_max_TP = iy_max;
+            //    int nb_nodes_owned_TP = 0;
+            //    atlas_omp_for( idx_t iy = iy_glb_min; iy <= iy_glb_max; iy++ ) {
+            //        for ( idx_t ix = ix_glb_min; ix <= ix_glb_max; ix++ ) {
+            //            int p = partition( ix, iy );
+            //            if ( p == mypart ) {
+            //                ix_min_TP = std::min<idx_t>( ix_min_TP, ix );
+            //                ix_max_TP = std::max<idx_t>( ix_max_TP, ix );
+            //                iy_min_TP = std::min<idx_t>( iy_min_TP, iy );
+            //                iy_max_TP = std::max<idx_t>( iy_max_TP, iy );
+            //                nb_nodes_owned_TP++;
+            //            } else if (cfg.halosize > 0) {
+            //                for (idx_t h = cfg.halosize; h > 0; --h) {
+            //                    int p_l = partition( ix-h, iy );
+            //                    int p_r = partition( ix+h, iy );
+            //                    int p_u = partition( ix, iy+h );
+            //                    int p_d = partition( ix, iy-h );
+            //                    if ( (p_l == mypart) || (p_r == mypart) ||
+            //                         (p_u == mypart) || (p_d == mypart) ) {
+            //                        ix_min_TP = std::min<idx_t>( ix_min_TP, ix );
+            //                        ix_max_TP = std::max<idx_t>( ix_max_TP, ix );
+            //                        iy_min_TP = std::min<idx_t>( iy_min_TP, iy );
+            //                        iy_max_TP = std::max<idx_t>( iy_max_TP, iy );
+            //                        break;
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //    atlas_omp_critical {
+            //        nb_nodes_owned += nb_nodes_owned_TP;
+            //        ix_min = std::min<int>( ix_min_TP, ix_min);
+            //        ix_max = std::max<int>( ix_max_TP, ix_max);
+            //        iy_min = std::min<int>( iy_min_TP, iy_min);
+            //        iy_max = std::max<int>( iy_max_TP, iy_max);
+            //    }
+            //}
+            atlas_omp_pragma(omp parallel reduction(min:ix_min,iy_min) reduction(max:ix_max,iy_max) reduction(+:nb_nodes_owned) ) {
                 atlas_omp_for( idx_t iy = iy_glb_min; iy <= iy_glb_max; iy++ ) {
                     for ( idx_t ix = ix_glb_min; ix <= ix_glb_max; ix++ ) {
                         int p = partition( ix, iy );
                         if ( p == mypart ) {
-                            ix_min_TP = std::min<idx_t>( ix_min_TP, ix );
-                            ix_max_TP = std::max<idx_t>( ix_max_TP, ix );
-                            iy_min_TP = std::min<idx_t>( iy_min_TP, iy );
-                            iy_max_TP = std::max<idx_t>( iy_max_TP, iy );
-                            nb_nodes_owned_TP++;
+                            ix_min = std::min<idx_t>( ix_min, ix );
+                            ix_max = std::max<idx_t>( ix_max, ix );
+                            iy_min = std::min<idx_t>( iy_min, iy );
+                            iy_max = std::max<idx_t>( iy_max, iy );
+                            nb_nodes_owned++;
+                        } else if (cfg.halosize > 0) {
+                            for (idx_t h = cfg.halosize; h > 0; --h) {
+                                int p_l = partition( ix-h, iy );
+                                int p_r = partition( ix+h, iy );
+                                int p_u = partition( ix, iy+h );
+                                int p_d = partition( ix, iy-h );
+                                if ( (p_l == mypart) || (p_r == mypart) ||
+                                     (p_u == mypart) || (p_d == mypart) ) {
+                                    ix_min = std::min<idx_t>( ix_min, ix );
+                                    ix_max = std::max<idx_t>( ix_max, ix );
+                                    iy_min = std::min<idx_t>( iy_min, iy );
+                                    iy_max = std::max<idx_t>( iy_max, iy );
+                                    break;
+                                }
+                            }
                         }
                     }
-                }
-                atlas_omp_critical {
-                    nb_nodes_owned += nb_nodes_owned_TP;
-                    ix_min = std::min<int>( ix_min_TP, ix_min );
-                    ix_max = std::max<int>( ix_max_TP, ix_max );
-                    iy_min = std::min<int>( iy_min_TP, iy_min );
-                    iy_max = std::max<int>( iy_max_TP, iy_max );
                 }
             }
         }
@@ -135,6 +245,16 @@ struct SurroundingRectangle {
         // add one row/column for ghost nodes (which include periodicity points)
         ix_max = std::min( ix_glb_max, ix_max + 1 );
         iy_max = std::min( iy_glb_max, iy_max + 1 );
+
+        logFile << "[" << mypart << "] ix_glb_min: " << ix_glb_min << std::endl;
+        logFile << "[" << mypart << "] ix_glb_max: " << ix_glb_max << std::endl;
+        logFile << "[" << mypart << "] iy_glb_min: " << iy_glb_min << std::endl;
+        logFile << "[" << mypart << "] iy_glb_max: " << iy_glb_max << std::endl;
+
+        logFile << "[" << mypart << "] ix_min: "     << ix_min << std::endl;
+        logFile << "[" << mypart << "] ix_max: "     << ix_max << std::endl;
+        logFile << "[" << mypart << "] iy_min: "     << iy_min << std::endl;
+        logFile << "[" << mypart << "] iy_max: "     << iy_max << std::endl;
 
         // dimensions of surrounding rectangle (SR)
         nx = ix_max - ix_min + 1;
@@ -146,33 +266,82 @@ struct SurroundingRectangle {
 
         // partitions and local indices in SR
         parts.resize( size, -1 );
-        is_ghost.resize( size, 1 /*true*/ );
+        halo.resize( size, 0 );
+        is_ghost.resize( size, true );
         // vectors marking nodes that are necessary for this proc's cells
         is_node.resize( size, false );
 
         {  // Compute : SR.part, SR.is_ghost
             ATLAS_TRACE( "part,is_ghost" );
-            atlas_omp_parallel_for( idx_t iy = 0; iy < ny; iy++ ) {
+            //atlas_omp_parallel_for( idx_t iy = 0; iy < ny; iy++ ) {
+            for( idx_t iy = 0; iy < ny; iy++ ) {
                 idx_t iy_glb = iy_min + iy;  // global y-index
                 for ( idx_t ix = 0; ix < nx; ix++ ) {
                     idx_t ii       = index( ix, iy );
                     idx_t ix_glb   = ix_min + ix;  // global x-index
                     parts.at( ii ) = partition( ix_glb, iy_glb );
+                    bool halo_found = false;
+                    int halo_dist = cfg.halosize;
+                    if ((cfg.halosize > 0) && parts.at( ii ) != mypart ) {
+                      // search the surrounding halosize index square for a node on my
+                      // partition to determine the halo distance
+                      for (idx_t h2 = -cfg.halosize; h2 <= cfg.halosize; ++h2) {
+                        for (idx_t h1 = -cfg.halosize; h1 <= cfg.halosize; ++h1) {
+                          if (h1 == 0 && h2 == 0) continue;
+                          if (partition(ix_glb + h1, iy_glb + h2) == mypart) {
+                            // find the minimum distance from this halo node to
+                            // a node on the partition
+                            auto dist = std::max(std::abs(h1), std::abs(h2));
+                            halo_dist = std::min(dist, halo_dist);
+                            halo_found = true;
+                          }
+                        }
+                      }
+                      if (halo_found) {
+                        halo.at( ii ) = halo_dist;
+                      }
+                    }
 
-                    if ( iy_glb < ny_halo ) {
-                        is_ghost.at( ii ) = parts.at( ii ) != mypart ? 1 : 0;
+                    if ( iy_glb < ny_orca_halo ) {
+                        is_ghost.at( ii ) = ( parts.at( ii ) != mypart );
+                    }
+                    // diagnostics
+                    idx_t glb_i = ix_min + ix + orca.haloWest();
+                    idx_t glb_j = iy_min + iy + orca.haloSouth();
+                    //auto iter = std::find_if(glb_ij_pairs.begin(), glb_ij_pairs.end(),
+                    //                [&](const std::pair<int, int>& p) {
+                    //                  return ( glb_i == p.first) && (glb_j == p.second);
+                    //                });
+                    //if (iter != glb_ij_pairs.end()) {
+                    if (halo_found) {
+                      logFile << "[" << mypart << "] ix " << ix << " iy " << iy
+                              << " glb_i " << glb_i << " glb_j " << glb_j
+                              << " halo " << halo_dist << " partition " << parts.at (ii)
+                              << " ghost " << is_ghost.at(ii) << std::endl;
                     }
                 }
             }
         }
+        logFile << "[" << mypart << "] end of SR output" << std::endl;
+        logFile.close();
         // determine number of cells and number of nodes
         {  // Compute SR.is_node
             ATLAS_TRACE( "is_node" );
+            std::vector<int> is_cell(size, false);
             auto mark_node_used = [&]( int ix, int iy ) {
+                if (ix < -halosize || ix >= nx + halosize || iy < 0 || iy >= ny) return;
                 idx_t ii = index( ix, iy );
                 if ( !is_node[ii] ) {
                     ++nb_nodes;
                     is_node[ii] = true;
+                }
+            };
+            auto mark_cell_used = [&]( int ix, int iy ) {
+                if (ix < -halosize || ix >= nx + halosize || iy < 0 || iy >= ny) return;
+                idx_t ii = index( ix, iy );
+                if ( !is_cell[ii] ) {
+                    ++nb_cells;
+                    is_cell[ii] = true;
                 }
             };
             // Loop over all elements
@@ -180,13 +349,23 @@ struct SurroundingRectangle {
             nb_nodes = 0;
             for ( idx_t iy = 0; iy < ny - 1; iy++ ) {      // don't loop into ghost/periodicity row
                 for ( idx_t ix = 0; ix < nx - 1; ix++ ) {  // don't loop into ghost/periodicity column
-                    if ( is_ghost[index( ix, iy )] == 0 ) {
-                        ++nb_cells;
+                    if ( !is_ghost[index( ix, iy )] ) {
+                        mark_cell_used( ix, iy );
                         mark_node_used( ix, iy );
                         mark_node_used( ix + 1, iy );
                         mark_node_used( ix + 1, iy + 1 );
                         mark_node_used( ix, iy + 1 );
-                    }
+                        for (idx_t hx = -cfg.halosize; hx <= cfg.halosize; ++hx) {
+                            for (idx_t hy = -cfg.halosize; hy <= cfg.halosize; ++hy) {
+                                if ( hx == 0 && hy == 0 ) continue;
+                                //mark_cell_used( ix + hx, iy + hy );
+                                mark_node_used( ix + hx, iy + hy );
+                                mark_node_used( ix + 1 + hx, iy + hy );
+                                mark_node_used( ix + 1 + hx, iy + 1 + hy );
+                                mark_node_used( ix + hx, iy + 1 + hy );
+                            }
+                        }
+                    }  // if not ghost index
                 }
             }
         }
@@ -265,6 +444,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     Configuration SR_cfg{};
     SR_cfg.mypart = mypart_;
+    SR_cfg.nparts = nparts_;
+    SR_cfg.halosize = halosize_;
     SurroundingRectangle SR( grid, distribution, SR_cfg );
 
 
@@ -276,7 +457,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     int nparts     = nparts_;
     int nx         = rg.nx();
     int ny         = rg.ny();
-    int ny_halo    = ny + orca.haloNorth();
+    int ny_orca_halo    = ny + orca.haloNorth();
     int iy_glb_max = ny + orca.haloNorth() - 1;
     int iy_glb_min = -orca.haloSouth();
     int ix_glb_max = nx + orca.haloEast() - 1;
@@ -343,6 +524,11 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     std::vector<idx_t> node_index( SR.size, -1 );
 
+    std::ofstream logFile(distribution.type() + "-"
+        + std::to_string(halosize_) + "_p"
+        + std::to_string(mypart_) + ".log", std::ios_base::app);
+
+    std::vector<idx_t> grid_fold_inodes;
     {
         ATLAS_TRACE( "nodes" );
 
@@ -353,7 +539,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         ATLAS_TRACE_SCOPE( "indexing" )
         for ( idx_t iy = 0; iy < SR.ny; iy++ ) {
             idx_t iy_glb = SR.iy_min + iy;
-            ATLAS_ASSERT( iy_glb < ny_halo );
+            ATLAS_ASSERT( iy_glb < ny_orca_halo );
             for ( idx_t ix = 0; ix < SR.nx; ix++ ) {
                 idx_t ii = SR.index( ix, iy );
                 // node properties
@@ -361,7 +547,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     // set node counter
                     if ( SR.is_ghost[ii] != 0 ) {
                         node_index[ii] = inode_ghost++;
-                        ATLAS_ASSERT( node_index[ii] < SR.nb_nodes );
+                        ATLAS_ASSERT_MSG( node_index[ii] < SR.nb_nodes,
+                            std::string("node_index[") + std::to_string(ii) + std::string("] ") + std::to_string(node_index[ii]) + " >= " + std::to_string(SR.nb_nodes));
                     }
                     else {
                         node_index[ii] = inode_nonghost++;
@@ -375,9 +562,10 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         inode_ghost    = SR.nb_nodes_owned;  // ghost nodes start counting after nonghost nodes
 
         ATLAS_TRACE_SCOPE( "filling" )
-        atlas_omp_parallel_for( idx_t iy = 0; iy < SR.ny; iy++ ) {
+        //atlas_omp_parallel_for( idx_t iy = 0; iy < SR.ny; iy++ ) {
+        for( idx_t iy = 0; iy < SR.ny; iy++ ) {
             idx_t iy_glb = SR.iy_min + iy;
-            ATLAS_ASSERT( iy_glb < ny_halo );
+            ATLAS_ASSERT( iy_glb < ny_orca_halo );
             double lon00 = orca.xy( 0, 0 ).x();
             double west  = lon00 - 90.;
 
@@ -447,7 +635,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                         idx_t master_i                = 0;
                         idx_t master_j                = 0;
                         orca.index2ij( master_idx, master_i, master_j );
-                        nodes.part( inode ) = partition( master_i, master_j );
+                        nodes.part( inode ) = SR.partition( master_i, master_j );
                         flags.set( Topology::GHOST );
                         nodes.remote_idx( inode ) = serial_distribution ? static_cast<int>( master_idx ) : -1;
 
@@ -477,8 +665,11 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                                 orca.index2ij( master_idx, ix_glb_master, iy_glb_master );
                                 orca.lonlat( ix_glb_master, iy_glb_master, xy_master );
                                 normalise( xy_master );
-                                if ( std::abs( xy_master[LON] - _xy[LON] ) < 1.e-12 ) {
-                                    flags.unset( Topology::PERIODIC );
+                                if( std::abs(xy_master[LON] - _xy[LON]) < 1.e-12 ) {
+                                    flags.unset(Topology::PERIODIC);
+                                    if (( std::abs(xy_master[LAT] - _xy[LAT]) < 1.e-12 ) &&
+                                        ( iy_glb >= ny - orca.haloNorth() - 1 ))
+                                        grid_fold_inodes.push_back(inode);
                                 }
                             }
                         }
@@ -513,6 +704,19 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                         }
                         return 0;
                     }();
+                    idx_t glb_i = ix_glb + orca.haloWest();
+                    idx_t glb_j = iy_glb + orca.haloSouth();
+                    auto iter = std::find_if(glb_ij_pairs.begin(), glb_ij_pairs.end(),
+                                    [&](const std::pair<int, int>& p) {
+                                      return ( glb_i == p.first) && (glb_j == p.second);
+                                    });
+                    if (iter != glb_ij_pairs.end()) {
+                      logFile << "[" << mypart_ << "] is_node ii " << ii << " ix " << ix << " iy " << iy
+                              << " glb_i " << glb_i << " glb_j " << glb_j << " remote index " << nodes.remote_idx(inode)
+                              << " lon " << nodes.lonlat(inode, 0) << " lat " << nodes.lonlat(inode, 1)
+                              << " halo " << nodes.halo(inode) << " partition " << nodes.part(inode)
+                              << " ghost " << nodes.ghost(inode) << std::endl;
+                    }
                 }
             }
         }
@@ -533,7 +737,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         }
 
         ATLAS_TRACE_SCOPE( "filling" )
-        atlas_omp_parallel_for( idx_t iy = 0; iy < SR.ny - 1; iy++ ) {  // don't loop into ghost/periodicity row
+        //atlas_omp_parallel_for( idx_t iy = 0; iy < SR.ny - 1; iy++ ) {  // don't loop into ghost/periodicity row
+        for( idx_t iy = 0; iy < SR.ny - 1; iy++ ) {  // don't loop into ghost/periodicity row
             for ( idx_t ix = 0; ix < SR.nx - 1; ix++ ) {                // don't loop into ghost/periodicity column
                 idx_t ii   = SR.index( ix, iy );
                 int ix_glb = SR.ix_min + ix;
@@ -626,9 +831,10 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     // Degenerate points in the ORCA mesh mean that the standard BuildHalo
     // methods for updating halo sizes will not work.
-    //mesh.metadata().set("halo_locked", true);
-    mesh.nodes().metadata().set( "NbRealPts", static_cast<size_t>( nnodes ) );
-    mesh.nodes().metadata().set( "NbVirtualPts", static_cast<size_t>( 0 ) );
+    mesh.metadata().set("halo_locked", true);
+    mesh.metadata().set("halo", halosize_);
+    mesh.nodes().metadata().set<size_t>( "NbRealPts", nnodes );
+    mesh.nodes().metadata().set<size_t>( "NbVirtualPts", size_t( 0 ) );
 }
 
 using Unique2Node = std::map<gidx_t, idx_t>;
@@ -727,7 +933,6 @@ void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
                                               std::to_string( jnode ) );
     }
 
-    mesh.metadata().set( "halo", 0); // test the atlas BuildHalo halo_ );
     mesh.metadata().set( "periodic", true );
     nodes.metadata().set( "parallel", true );
 }
@@ -735,8 +940,8 @@ void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
 OrcaMeshGenerator::OrcaMeshGenerator( const eckit::Parametrisation& config ) {
     config.get( "partition", mypart_ = mpi::rank() );
     config.get( "partitions", nparts_ = mpi::size() );
-    config.get( "halo", halo_ = 0 );
-    if (halo_ < 0 || halo_ > 1)
+    config.get( "halo", halosize_);
+    if (halosize_ < 0 || halosize_ > 1)
       throw_NotImplemented("Only halo sizes 0 or 1 ORCA grids are currently supported", Here());
 }
 
@@ -745,7 +950,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Partitioner& par
     ATLAS_ASSERT(valid_distributions.find(partitioner.type()) != valid_distributions.end(),
                  partitioner.type() + " is not an implemented distribution type. "
                  + "Valid types are 'serial', 'checkerboard' or 'equal_regions', 'equal_area'");
-    if (partitioner.type() == "serial" && halo_ > 1)
+    if (partitioner.type() == "serial" && halosize_ > 1)
       throw_NotImplemented("halo size must be zero for 'serial' distribution type ORCA grids", Here());
     auto regular_grid = equivalent_regular_grid( grid );
     auto distribution = grid::Distribution( regular_grid, partitioner );

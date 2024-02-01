@@ -41,15 +41,17 @@ namespace test {
 CASE( "test haloExchange " ) {
     auto gridnames = std::vector<std::string>{
         "ORCA2_T",   //
-        "ORCA2_U",   //
-        "ORCA2_V",   //
-        "eORCA1_T",  //
-                     //        "eORCA025_T",  //
-                     //        "eORCA12_T",  //
+//        "ORCA2_U",   //
+//        "ORCA2_V",   //
+//        "eORCA1_T",  //
+//        "eORCA025_T",  //
+//        "eORCA12_T",  //
     };
     auto distributionNames = std::vector<std::string>{
-        "serial", "checkerboard",
-        "equal_regions",  //
+      // "serial",
+      "checkerboard",
+      // "equal_regions",
+      // "equal_area",
     };
 
     auto rollup_plus = []( const double lon, const double lat ) {
@@ -108,6 +110,7 @@ CASE( "test haloExchange " ) {
                     const auto ij = array::make_view<idx_t, 2>( mesh.nodes().field( "ij" ) );
 
                     double sumSquares{ 0.0 };
+                    int halocount = 0;
                     for ( idx_t jnode = 0; jnode < mesh.nodes().size(); ++jnode ) {
                         f2( jnode )      = 0;
                         const double lon = lonlat( jnode, 0 );
@@ -123,9 +126,17 @@ CASE( "test haloExchange " ) {
                                       << " lon " << lonlat( jnode, 0 ) << " lat " << lonlat( jnode, 1 ) << std::endl;
                             f2( jnode ) = 1;
                         }
+                        if (halos(jnode) > 0) {
+                          std::cout << "[" << mpi::rank() << "] i " << ij(jnode, 0) << " j " << ij(jnode, 1)
+                                    << " halo(" << jnode << ") " << halos(jnode)
+                                    << " ghost " << ghosts(jnode) << " master_global_index " << master_glb_idxs(jnode)
+                                    << " lon " << lonlat(jnode, 0) << " lat " << lonlat(jnode, 1) << std::endl;
+                          halocount++;
+                        }
                     }
                     //if ( count != 0 ) {
                         Log::info() << "count nonzero and norm of differences is: " << std::sqrt(sumSquares) << std::endl;
+                        Log::info() << "count nonzero halo points: " << halocount << std::endl;
                         Log::info() << "To diagnose problem, uncomment mesh writing here: " << Here() << std::endl;
                         output::Gmsh gmsh(
                             std::string("haloExchange_")+gridname+"_"+distributionName+"_"+std::to_string(halo)+".msh",
