@@ -13,6 +13,10 @@
 #include "atlas/meshgenerator/MeshGenerator.h"
 #include "atlas/meshgenerator/detail/MeshGeneratorImpl.h"
 #include "atlas/util/Config.h"
+#include "atlas/grid/Distribution.h"
+#include "atlas-orca/grid/OrcaGrid.h"
+#include "atlas-orca/meshgenerator/SurroundingRectangle.h"
+
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 namespace eckit {

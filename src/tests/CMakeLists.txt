@@ -47,3 +47,16 @@ ecbuild_add_test( TARGET  atlas_test_orca_mesh_boundaries
                   ENVIRONMENT ${ATLAS_TEST_ENVIRONMENT}
                   CONDITION eckit_HAVE_LZ4  AND eckit_HAVE_MPI)
 
+ecbuild_add_test( TARGET  atlas_test_surrounding_rectangle_MPI2
+                  SOURCES test_surrounding_rectangle.cc
+                  LIBS    atlas-orca
+                  MPI     2
+                  ENVIRONMENT ${ATLAS_TEST_ENVIRONMENT}
+                  CONDITION eckit_HAVE_LZ4  AND eckit_HAVE_MPI)
+
+ecbuild_add_test( TARGET  atlas_test_surrounding_rectangle_MPI4
+                  SOURCES test_surrounding_rectangle.cc
+                  LIBS    atlas-orca
+                  MPI     4
+                  ENVIRONMENT ${ATLAS_TEST_ENVIRONMENT}
+                  CONDITION eckit_HAVE_LZ4  AND eckit_HAVE_MPI)
