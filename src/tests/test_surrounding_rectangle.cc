@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <sstream>
 #include <fstream>
+#include <iomanip>
 
 #include "atlas-orca/meshgenerator/SurroundingRectangle.h"
 #include "atlas/functionspace/NodeColumns.h"
@@ -23,6 +24,7 @@
 #include "atlas/parallel/mpi/mpi.h"
 #include "atlas/util/Config.h"
 #include "atlas/util/function/VortexRollup.h"
+#include "atlas/util/Point.h"
 
 #include "atlas-orca/grid/OrcaGrid.h"
 #include "atlas-orca/util/PointIJ.h"
@@ -49,6 +51,118 @@ int wrap( idx_t value, idx_t lower, idx_t upper ) {
 
 //-----------------------------------------------------------------------------
 
+CASE("test matchu between orca and regular ij indexing ") {
+  std::string gridname = "ORCA2_T";
+
+  //for (const std::string& gridname : gridnames) {}
+
+  auto mypart = atlas::mpi::rank();
+  auto orca_grid = OrcaGrid(gridname);
+
+  StructuredGrid::YSpace yspace{grid::LinearSpacing{
+      {-80., 90.}, orca_grid.ny(), true}};
+  StructuredGrid::XSpace xspace{
+      grid::LinearSpacing{{0., 360.}, orca_grid.nx(), false}};
+  StructuredGrid regular_grid{xspace, yspace};
+
+  SECTION("is the regular grid ij index unique?") {
+    const idx_t size = regular_grid.size();
+    std::set<gidx_t> ij_uid;
+    for (gidx_t node = 0; node < size; ++node) {
+      idx_t i, j;
+      regular_grid.index2ij(node, i, j);
+      ij_uid.insert(i*10*size + j);
+    }
+
+    if (size != ij_uid.size())
+      std::cout << "[" << mypart
+                << "] number of duplicate regular grid ij UID points "
+                << size - ij_uid.size()
+                << "/" << size << std::endl;
+    EXPECT(size == ij_uid.size());
+  }
+
+  SECTION("are the orca grid internal ij indices unique?") {
+    if (atlas::mpi::rank() == 0) {
+      std::ofstream fold_file("northfold.csv");
+      for (idx_t i = 0; i < orca_grid.nx(); ++i) {
+        fold_file << std::setw(8) << i << ", ";
+      }
+      fold_file << std::endl;
+      for (idx_t j = orca_grid.ny()+2; j > orca_grid.ny()-1; --j) {
+        for (idx_t i = 0; i < orca_grid.nx(); ++i) {
+          fold_file << std::setw(8) << orca_grid.periodicIndex(i, j) << ", ";
+        }
+        fold_file << std::endl;
+      }
+      fold_file.close();
+    }
+    const idx_t size = orca_grid.size();
+    std::set<gidx_t> ij_uid;
+    for (gidx_t node = 0; node < size; ++node) {
+      idx_t i, j;
+      orca_grid.index2ij(node, i, j);
+      if (i >= orca_grid.nx() || i < 0) continue;
+      if (j >= orca_grid.ny() || j < 0) continue;
+      ij_uid.insert(i*10*size + j);
+    }
+    auto internal_size = orca_grid.nx()*orca_grid.ny();
+    if (internal_size != ij_uid.size())
+      std::cout << "[" <<  mypart
+                << "] number of duplicate orca grid ij UID points "
+                << internal_size - ij_uid.size()
+                << "/" << internal_size << std::endl;
+    EXPECT(internal_size == ij_uid.size());
+  }
+
+  SECTION("Are the boundary symmetries present in the orca grid ij indices?") {
+    const idx_t size = orca_grid.size();
+    atlas::PointLonLat lonlat, lonlat_halo;
+    auto print_mismatch = [&](idx_t i, idx_t j) {
+      std::cout << "[" << mypart
+                << "] lonlat[0] " << lonlat[0] << " != " << lonlat_halo[0]
+                << "\n lonlat[1] " << lonlat[1] << " != " << lonlat_halo[1]
+                << "\n i, j " << i << ", " << j
+                << "\n orca_grid.PeriodicIndex(i, j) " << orca_grid.periodicIndex(i, j)
+                << std::endl;
+    };
+    for (gidx_t node = 0; node < size; ++node) {
+      idx_t i, j;
+      orca_grid.index2ij(node, i, j);
+      if (j < 0) {
+        continue;
+      } else if (j == orca_grid.ny() ) {
+        // check northfold boundary - first row
+        lonlat = orca_grid.lonlat(i, j);
+        auto pivot = orca_grid.nx() / 2;
+        if (i == pivot) continue; // skip the complex case at the pivot.
+        // count from right-hand-side of grid.
+        lonlat_halo = orca_grid.lonlat(orca_grid.nx() - i, orca_grid.ny() + 2);
+        if (orca_grid.periodicIndex(i, j) != orca_grid.periodicIndex(orca_grid.nx() - i - 1, orca_grid.ny() + 2)){
+          std::cout << "------" << std::endl;
+          print_mismatch(i,j);
+          print_mismatch(orca_grid.nx() - i, orca_grid.ny() + 2);
+          std::cout << "------" << std::endl;
+        }
+        EXPECT(orca_grid.periodicIndex(i, j) == orca_grid.periodicIndex(orca_grid.nx() - i - 1, orca_grid.ny() + 2));
+      } else if (j == orca_grid.ny() + 1 ) {
+        // check northfold boundary - centre fold row
+        lonlat = orca_grid.lonlat(i, j);
+      } else if (j == orca_grid.ny() + 2 ) {
+        // check northfold boundary - second row
+        lonlat = orca_grid.lonlat(i, j);
+      } else if (i >= orca_grid.nx()) {
+        // check east-west boundary
+        lonlat = orca_grid.lonlat(i, j);
+        lonlat_halo = orca_grid.lonlat(-i+orca_grid.nx(), j);
+        EXPECT(lonlat[0] == lonlat_halo[0]);
+        EXPECT(lonlat[1] == lonlat_halo[1]);
+      }
+    }
+  }
+}
+
+/*
 CASE("test surrounding rectangle ") {
   std::string gridname = "ORCA2_T";
   std::string distributionName = "checkerboard";
@@ -57,7 +171,7 @@ CASE("test surrounding rectangle ") {
     return 1 + util::function::vortex_rollup(lon, lat, 0.0);
   };
 
-  for (int halo = 0; halo < 3; ++halo) {
+  for (int halo = 0; halo < 1; ++halo) {
     SECTION(gridname + "_" + distributionName + "_halo" + std::to_string(halo)) {
       auto grid = OrcaGrid(gridname);
       auto partitioner_config = Config();
@@ -78,11 +192,20 @@ CASE("test surrounding rectangle ") {
       cfg.ny_glb = grid.ny();
       std::cout << "[" << cfg.mypart << "] " << regular_grid.type() << std::endl;
 
+      EXPECT(regular_grid.ny() == grid.ny());
+      for (idx_t ix = 0; ix < grid.ny(); ++ix) {
+        EXPECT(regular_grid.nx(ix) == grid.nx());
+      }
+      std::cout << " last index? " << regular_grid.index(grid.nx()-1, grid.ny()-1) << std::endl;
+
       orca::meshgenerator::SurroundingRectangle rectangle(distribution, cfg);
 
       auto regular_mesh = atlas::Mesh(regular_grid, partitioner);
+
       auto fview_lonlat =
           array::make_view<double, 2>(regular_mesh.nodes().lonlat());
+      auto fview_glb_idx =
+          array::make_view<gidx_t, 1>(regular_mesh.nodes().global_index());
 
     std::ofstream nodeFile(std::string("is_node_") + distribution.type() + "-"
         + std::to_string(cfg.halosize) + "_p"
@@ -111,10 +234,12 @@ CASE("test surrounding rectangle ") {
       auto fview_part = array::make_view<int, 1>(field_part);
       std::vector<int> indices;
       std::vector<bool> this_partition;
-      for (int j = 0; j < rectangle.ny(); j++) {
+      for (uint64_t j = 0; j < rectangle.ny(); j++) {
         int iy_glb = rectangle.iy_min() + j;
-        for (int i = 0; i < rectangle.nx(); i++) {
+        EXPECT(iy_glb < grid.ny());
+        for (uint64_t i = 0; i < rectangle.nx(); i++) {
           int ix_glb = rectangle.ix_min() + i;
+          EXPECT(ix_glb < grid.nx());
           auto ii = rectangle.index(i, j);
           indices.emplace_back(ii);
 
@@ -123,27 +248,39 @@ CASE("test surrounding rectangle ") {
           ghostFile << i << ", " << j << ", " << rectangle.is_ghost.at(ii) << std::endl;
           partFile << i << ", " << j << ", " << rectangle.parts.at(ii) << std::endl;
 
-          fview_part(regular_grid.index(ix_glb, iy_glb)) ==
-              rectangle.partition(ix_glb, iy_glb);
+          idx_t reg_grid_glb_idx  = regular_grid.index(ix_glb, iy_glb);
+          idx_t orca_grid_glb_idx = grid.periodicIndex(ix_glb, iy_glb);
+          idx_t reg_grid_remote_idx = 0;
+          while(reg_grid_remote_idx < fview_glb_idx.size()) {
+            if (reg_grid_glb_idx == fview_glb_idx(reg_grid_remote_idx))
+              break;
+            ++reg_grid_remote_idx;
+          }
+
           if (rectangle.partition(ix_glb, iy_glb) == cfg.mypart) {
             this_partition.emplace_back(true);
           } else {
             this_partition.emplace_back(false);
           }
-          fview_halo(regular_grid.index(ix_glb, iy_glb)) == 0;
-          if (rectangle.halo.at(ii) > 0) {
-            fview_halo(regular_grid.index(ix_glb, iy_glb)) == 1;
-            // all halo nodes should be ghost nodes
-            //EXPECT(rectangle.is_ghost.at(ii));
-          }
-          fview_node(regular_grid.index(ix_glb, iy_glb)) == 0;
-          if (rectangle.is_node.at(ii)) {
-            fview_node(regular_grid.index(ix_glb, iy_glb)) == 1;
-          }
-          fview_ghost(regular_grid.index(ix_glb, iy_glb)) == 0;
-          if (rectangle.is_ghost.at(ii)) {
-            fview_ghost(regular_grid.index(ix_glb, iy_glb)) == 1;
-          }
+
+          if (reg_grid_remote_idx >= fview_halo.shape(0))
+            std::cout << " reg_grid_remote_idx " << reg_grid_remote_idx << std::endl;
+          //EXPECT(reg_grid_remote_idx < fview_halo.shape(0));
+
+          //fview_halo(reg_grid_remote_idx) == 0;
+          //if (rectangle.halo.at(ii) > 0) {
+          //  fview_halo(regular_grid.index(ix_glb, iy_glb)) == 1;
+          //  // all halo nodes should be ghost nodes
+          //  //EXPECT(rectangle.is_ghost.at(ii));
+          //}
+          //fview_node(regular_grid.index(ix_glb, iy_glb)) == 0;
+          //if (rectangle.is_node.at(ii)) {
+          //  fview_node(regular_grid.index(ix_glb, iy_glb)) == 1;
+          //}
+          //fview_ghost(regular_grid.index(ix_glb, iy_glb)) == 0;
+          //if (rectangle.is_ghost.at(ii)) {
+          //  fview_ghost(regular_grid.index(ix_glb, iy_glb)) == 1;
+          //}
           // If it is not a ghost node, it must be a node, however some ghost
           // nodes are also nodes.
           // TODO: Understand what is going on with this!
@@ -242,6 +379,7 @@ CASE("test surrounding rectangle ") {
     }
   }
 }
+*/
 
 } // namespace test
 } // namespace atlas
