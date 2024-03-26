@@ -180,15 +180,6 @@ CASE("test matchup between orca and regular ij indexing ") {
   SECTION("Are the boundary symmetries present in the orca grid ij indices?") {
     const idx_t size = orca_grid.size();
     atlas::PointLonLat lonlat, lonlat_halo;
-    auto print_mismatch = [&](idx_t i, idx_t j) {
-      //auto master = periodicity(i, j);
-      std::cout << " lonlat[0] " << lonlat[0] << " != " << lonlat_halo[0]
-                << "\n lonlat[1] " << lonlat[1] << " != " << lonlat_halo[1]
-                << "\n i, j " << i << ", " << j
-                //<< "\n master.i, master.j " << master.i << ", " << master.j
-                << "\n orca_grid.PeriodicIndex(i, j) " << orca_grid.periodicIndex(i, j)
-                << std::endl;
-    };
     for (gidx_t node = 0; node < size; ++node) {
       idx_t i, j;
       orca_grid.index2ij(node, i, j);
@@ -200,36 +191,29 @@ CASE("test matchup between orca and regular ij indexing ") {
         // check northfold boundary
         //     - second row is swapped version of second from top row
         lonlat = orca_grid.lonlat(i, j);
-        if (orca_grid.periodicIndex(i, j) !=
-            orca_grid.periodicIndex(orca_grid.nx() - i, j - 2)) {
-          std::cout << "------ " << node << " ------" << std::endl;
-          print_mismatch(i, j);
-          print_mismatch(orca_grid.nx() - i, j - 2);
-          std::cout << "------" << std::endl;
-        }
+        lonlat_halo = orca_grid.lonlat(orca_grid.nx() - i, j - 2);
         EXPECT(orca_grid.periodicIndex(i, j) ==
                orca_grid.periodicIndex(orca_grid.nx() - i, j - 2));
+        EXPECT(lonlat[0] == lonlat_halo[0]);
+        EXPECT(lonlat[1] == lonlat_halo[1]);
       }
       if (j == orca_grid.ny() - 1) {
         // check northfold boundary - centre fold row is mirrored about the central pivot
-        lonlat = orca_grid.lonlat(i, j);
         if (i <= pivot) continue; // halo points are right of pivot on this row.
         // count from right-hand-side of grid.
+        lonlat = orca_grid.lonlat(i, j);
         lonlat_halo = orca_grid.lonlat(orca_grid.nx() - i, j);
-        if (orca_grid.periodicIndex(i, j) !=
-            orca_grid.periodicIndex(orca_grid.nx() - i, j)) {
-          std::cout << "------ " << node << " ------" << std::endl;
-          print_mismatch(i, j);
-          print_mismatch(orca_grid.nx() - i, j);
-          std::cout << "------" << std::endl;
-        }
         EXPECT(orca_grid.periodicIndex(i, j) ==
                orca_grid.periodicIndex(orca_grid.nx() - i, j));
+        EXPECT(lonlat[0] == lonlat_halo[0]);
+        EXPECT(lonlat[1] == lonlat_halo[1]);
       }
       if (i > orca_grid.nx()) {
         // check east-west boundary
         lonlat = orca_grid.lonlat(i, j);
         lonlat_halo = orca_grid.lonlat(orca_grid.nx() - i, j);
+        EXPECT(orca_grid.periodicIndex(i, j) ==
+               orca_grid.periodicIndex(orca_grid.nx() - i, j));
         EXPECT(lonlat[0] == lonlat_halo[0]);
         EXPECT(lonlat[1] == lonlat_halo[1]);
       }
