@@ -51,7 +51,6 @@ int wrap( idx_t value, idx_t lower, idx_t upper ) {
 
 //-----------------------------------------------------------------------------
 
-/*
 CASE("test surrounding rectangle ") {
   std::string gridname = "ORCA2_T";
   std::string distributionName = "checkerboard";
@@ -227,48 +226,47 @@ CASE("test surrounding rectangle ") {
 
       if (cfg.nparts == 2) {
         if (cfg.mypart == 0) {
-          EXPECT(rectangle.iy_min() == -1);
-          EXPECT(rectangle.iy_max() == 147 + halo);
-          EXPECT(rectangle.ix_min() == -1 - halo);
-          EXPECT(rectangle.ix_max() == 90 + halo);
+          EXPECT(rectangle.iy_min() == 0);
+          EXPECT(rectangle.iy_max() == 146 + halo);
+          EXPECT(rectangle.ix_min() == 0 - halo);
+          EXPECT(rectangle.ix_max() == 89 + halo);
         }
         if (cfg.mypart == 1) {
-          EXPECT(rectangle.iy_min() == -1);
-          EXPECT(rectangle.iy_max() == 147 + halo);
+          EXPECT(rectangle.iy_min() == 0);
+          EXPECT(rectangle.iy_max() == 146 + halo);
           EXPECT(rectangle.ix_min() == 90 - halo);
-          EXPECT(rectangle.ix_max() == 180 + halo);
+          EXPECT(rectangle.ix_max() == 179 + halo);
         }
       }
       if (cfg.nparts == 4) {
         if (cfg.mypart == 0) {
-          EXPECT(rectangle.iy_min() == -1);
-          EXPECT(rectangle.iy_max() == 74 + halo);
-          EXPECT(rectangle.ix_min() == -1 - halo);
-          EXPECT(rectangle.ix_max() == 90 + halo);
+          EXPECT(rectangle.iy_min() == 0);
+          EXPECT(rectangle.iy_max() == 73 + halo);
+          EXPECT(rectangle.ix_min() == 0 - halo);
+          EXPECT(rectangle.ix_max() == 89 + halo);
         }
         if (cfg.mypart == 1) {
-          EXPECT(rectangle.iy_min() == -1);
-          EXPECT(rectangle.iy_max() == 74 + halo);
+          EXPECT(rectangle.iy_min() == 0);
+          EXPECT(rectangle.iy_max() == 73 + halo);
           EXPECT(rectangle.ix_min() == 89 - halo);
-          EXPECT(rectangle.ix_max() == 180 + halo);
+          EXPECT(rectangle.ix_max() == 179 + halo);
         }
         if (cfg.mypart == 2) {
           EXPECT(rectangle.iy_min() == 73 - halo);
-          EXPECT(rectangle.iy_max() == 147 + halo);
-          EXPECT(rectangle.ix_min() == -1 - halo);
-          EXPECT(rectangle.ix_max() == 91 + halo);
+          EXPECT(rectangle.iy_max() == 146 + halo);
+          EXPECT(rectangle.ix_min() == 0 - halo);
+          EXPECT(rectangle.ix_max() == 90 + halo);
         }
         if (cfg.mypart == 3) {
           EXPECT(rectangle.iy_min() == 73 - halo);
-          EXPECT(rectangle.iy_max() == 147 + halo);
+          EXPECT(rectangle.iy_max() == 146 + halo);
           EXPECT(rectangle.ix_min() == 90 - halo);
-          EXPECT(rectangle.ix_max() == 180 + halo);
+          EXPECT(rectangle.ix_max() == 179 + halo);
         }
       }
     }
   }
 }
-*/
 
 } // namespace test
 } // namespace atlas
