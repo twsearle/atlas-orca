@@ -51,17 +51,28 @@ LocalOrcaGrid::LocalOrcaGrid( const Grid& grid, const SurroundingRectangle& rect
   // partitions and local indices in SR
   parts.resize( size_, -1 );
   halo.resize( size_, 0 );
-  is_node_.resize( size_, false );
-  is_cell_.resize( size_, false );
+  is_node.resize( size_, false );
   is_ghost.resize( size_, true );
   {
     //atlas_omp_parallel_for( idx_t iy = 0; iy < ny_; iy++ )
-    for( idx_t iy = 0; iy < ny_orca_; iy++ ) {
-      for ( idx_t ix = 0; ix < nx_orca_; ix++ ) {
+    for( size_t iy = 0; iy < ny_orca_; iy++ ) {
+      for ( size_t ix = 0; ix < nx_orca_; ix++ ) {
         // TODO: identify partition based on rectangle partition + orca info
         // TODO: identify halo based on halo partition + orca info
         bool halo_found = false;
         idx_t ii = index( ix, iy );
+        idx_t reg_ii = 0;
+        if (ix < rectangle.nx() && iy < rectangle.ny()) {
+          reg_ii = rectangle.index(ix, iy);
+        } else if (ix < rectangle.nx()) {
+          reg_ii = rectangle.index(ix, rectangle.ny()-1);
+        } else {
+          reg_ii = rectangle.index(rectangle.nx()-1, iy);
+        }
+        parts.at( ii )    = rectangle.parts.at( reg_ii );
+        halo.at( ii )     = rectangle.halo.at( reg_ii );
+        is_node.at( ii )  = rectangle.is_node.at( reg_ii );
+        is_ghost.at( ii ) = rectangle.is_ghost.at( reg_ii );
         int halo_dist = cfg_.halosize;
         if ((cfg_.halosize > 0) && parts.at( ii ) != cfg_.mypart ) {
           if (halo_found) {
@@ -80,16 +91,16 @@ LocalOrcaGrid::LocalOrcaGrid( const Grid& grid, const SurroundingRectangle& rect
     std::vector<int> is_cell(size_, false);
     auto mark_node_used = [&]( int ix, int iy ) {
       idx_t ii = index( ix, iy );
-      if ( !is_node_.at(ii) ) {
+      if ( !is_node.at(ii) ) {
         ++nb_real_nodes_;
-        is_node_.at(ii) = true;
+        is_node.at(ii) = true;
       }
     };
     auto mark_cell_used = [&]( int ix, int iy ) {
       idx_t ii = index( ix, iy );
-      if ( !is_cell_.at(ii) ) {
+      if ( !is_cell.at(ii) ) {
         ++nb_cells_;
-        is_cell_.at(ii) = true;
+        is_cell.at(ii) = true;
       }
     };
     // Loop over all elements in rectangle
@@ -114,9 +125,9 @@ LocalOrcaGrid::LocalOrcaGrid( const Grid& grid, const SurroundingRectangle& rect
   }
 }
 int LocalOrcaGrid::index( int i, int j ) const {
-  ATLAS_ASSERT_MSG(i < nx_orca_,
+  ATLAS_ASSERT_MSG(static_cast<size_t>(i) < nx_orca_,
      std::string("i >= nx_orca_: ") + std::to_string(i) + " >= " + std::to_string(nx_orca_));
-  ATLAS_ASSERT_MSG(j < ny_orca_,
+  ATLAS_ASSERT_MSG(static_cast<size_t>(j) < ny_orca_,
     std::string("j >= ny_orca_: ") + std::to_string(j) + " >= " + std::to_string(ny_orca_));
   return j * nx_orca_ + i;
 }

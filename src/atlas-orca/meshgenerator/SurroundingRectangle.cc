@@ -218,14 +218,6 @@ SurroundingRectangle::SurroundingRectangle(
         }
 
         is_ghost.at( ii ) = ( parts.at( ii ) != cfg_.mypart );
-        // diagnostics
-        if (halo_found) {
-          logFile.setf(std::ios::fixed);
-          logFile.precision(7);
-          logFile << "[" << cfg_.mypart << "] ix " << ix << " iy " << iy
-            << " halo " << halo_dist << " partition " << parts.at (ii)
-            << " ghost " << is_ghost.at(ii) << std::endl;
-        }
       }
     }
   }

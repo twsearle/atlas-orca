@@ -75,6 +75,7 @@ class LocalOrcaGrid {
     std::vector<int> parts;
     std::vector<int> halo;
     std::vector<int> is_ghost;
+    std::vector<int> is_node;
     uint64_t size() const {return size_;}
     uint64_t halosize() const {return cfg_.halosize;}
     int ix_orca_min() const {return ix_orca_min_;}
@@ -102,8 +103,6 @@ class LocalOrcaGrid {
     uint64_t nb_real_nodes_;
     uint64_t nb_ghost_nodes_;
     uint64_t nb_cells_;
-    std::vector<int> is_node_;
-    std::vector<int> is_cell_;
 };
 }  // namespace meshgenerator
 }  // namespace orca
