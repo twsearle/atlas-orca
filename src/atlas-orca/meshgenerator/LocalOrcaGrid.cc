@@ -73,7 +73,6 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
                                  iy < rectangle.ny() ? iy : rectangle.ny()-1);
         parts.at( ii )    = rectangle.parts.at( reg_ii );
         halo.at( ii )     = rectangle.halo.at( reg_ii );
-        is_node.at( ii )  = rectangle.is_node.at( reg_ii );
         is_ghost.at( ii ) = rectangle.is_ghost.at( reg_ii );
       }
     }
@@ -81,7 +80,7 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 
   // determine number of cells and number of nodes
   uint16_t nb_halo_nodes = 0;
-  {  // Compute SR.is_node
+  {
     std::vector<int> is_cell(size_, false);
     auto mark_node_used = [&]( int ix, int iy ) {
       idx_t ii = index( ix, iy );

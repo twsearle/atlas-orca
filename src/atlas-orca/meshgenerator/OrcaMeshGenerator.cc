@@ -162,6 +162,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     SR_cfg.ny_glb = orca_grid.ny();
 
     SurroundingRectangle SR(distribution, SR_cfg);
+    LocalOrcaGrid local_orca(orca_grid, SR);
 
     // global orca grid dimensions and index limits
     auto ny_orca_halo = orca_grid.ny() + orca_grid.haloNorth() + orca_grid.haloSouth();
@@ -174,10 +175,10 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     // clone some grid properties
     setGrid( mesh, grid, distribution );
 
-    // vector of local indices: necessary for remote indices of ghost nodes
+    // global index of the orca grid
     idx_t glbarray_offset  = -( nx_orca_halo * iy_glb_min ) - ix_glb_min;
     idx_t glbarray_jstride = nx_orca_halo;
-    auto index_glbarray = [&]( idx_t i, idx_t j ) {
+    auto orca_global_index = [&]( idx_t i, idx_t j ) {
         ATLAS_ASSERT( i <= ix_glb_max );
         ATLAS_ASSERT( j <= iy_glb_max );
         return glbarray_offset + j * glbarray_jstride + i;
@@ -188,15 +189,15 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     //---------------------------------------------------
 
     if ( serial_distribution ) {
-        ATLAS_ASSERT_MSG(orca_grid.nx() * orca_grid.ny() == SR.nb_real_nodes(),
+        ATLAS_ASSERT_MSG(orca_grid.nx() * orca_grid.ny() == local_orca.nb_real_nodes(),
           std::string("Size of the surrounding rectangle coord system does not match up with the size of the internal space in the orca_grid: ")
-          + std::to_string(orca_grid.nx() * orca_grid.nx()) + " != " + std::to_string(SR.nb_real_nodes()) );
-        //ATLAS_ASSERT_MSG(nx_orca_halo == SR.nx_orca,
-        //  std::string("Size of the surrounding rectangle x-space doesn't match up with orca-grid x-space: ")
-        //  + std::to_string(nx_orca_halo) + " != " + std::to_string(SR.nx_orca) );
-        //ATLAS_ASSERT_MSG(ny_orca_halo == SR.ny_orca,
-        //  std::string("Size of the surrounding rectangle y-space doesn't match up with orca-grid y-space: ")
-        //  + std::to_string(ny_orca_halo) + " != " + std::to_string(SR.ny_orca) );
+          + std::to_string(orca_grid.nx() * orca_grid.nx()) + " != " + std::to_string(local_orca.nb_real_nodes()) );
+        ATLAS_ASSERT_MSG(nx_orca_halo == local_orca.nx_orca(),
+          std::string("Size of the surrounding rectangle x-space doesn't match up with orca-grid x-space: ")
+          + std::to_string(nx_orca_halo) + " != " + std::to_string(local_orca.nx_orca()) );
+        ATLAS_ASSERT_MSG(ny_orca_halo == local_orca.ny_orca(),
+          std::string("Size of the surrounding rectangle y-space doesn't match up with orca-grid y-space: ")
+          + std::to_string(ny_orca_halo) + " != " + std::to_string(local_orca.ny_orca()) );
     }
 
     // define nodes and associated properties
@@ -298,7 +299,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     flags.reset();
 
                     // global index
-                    nodes.glb_idx( inode ) = index_glbarray( ix_glb, iy_glb ) + 1;  // no periodic point
+                    nodes.glb_idx( inode ) = orca_global_index( ix_glb, iy_glb ) + 1;  // no periodic point
 
                     // grid ij coordinates
                     nodes.ij( inode, XX ) = ix_glb;
