@@ -163,28 +163,23 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     SurroundingRectangle SR(distribution, SR_cfg);
 
-    LocalOrcaGrid::Configuration LO_cfg;
-    LO_cfg.mypart = mypart_;
-    LO_cfg.nparts = nparts_;
-    LO_cfg.ny_orca_halo = SR_cfg.ny_glb + orca_grid.haloNorth() + orca_grid.haloSouth();
-    LO_cfg.iy_glb_min = -orca_grid.haloSouth();
-    LO_cfg.iy_glb_max = LO_cfg.iy_glb_min + LO_cfg.ny_orca_halo - 1;
-    LO_cfg.ix_glb_max = orca_grid.haloEast() + SR_cfg.nx_glb - 1;
-    LO_cfg.ix_glb_min = -orca_grid.haloWest();
+    // global orca grid dimensions and index limits
+    auto ny_orca_halo = orca_grid.ny() + orca_grid.haloNorth() + orca_grid.haloSouth();
+    auto nx_orca_halo = orca_grid.nx() + orca_grid.haloEast() + orca_grid.haloWest();
+    auto iy_glb_min = -orca_grid.haloSouth();
+    auto iy_glb_max = iy_glb_min + ny_orca_halo;
+    auto ix_glb_max = orca_grid.haloEast() + orca_grid.nx();
+    auto ix_glb_min = -orca_grid.haloWest();
 
     // clone some grid properties
     setGrid( mesh, grid, distribution );
 
-    int nx_halo_WE = SR_cfg.nx_glb + orca_grid.haloEast() + orca_grid.haloWest();
-    int ny_halo_NS = SR_cfg.ny_glb + orca_grid.haloNorth() + orca_grid.haloSouth();
-
     // vector of local indices: necessary for remote indices of ghost nodes
-    idx_t glbarray_offset  = -( nx_halo_WE * LO_cfg.iy_glb_min ) - LO_cfg.ix_glb_min;
-    idx_t glbarray_jstride = nx_halo_WE;
-
+    idx_t glbarray_offset  = -( nx_orca_halo * iy_glb_min ) - ix_glb_min;
+    idx_t glbarray_jstride = nx_orca_halo;
     auto index_glbarray = [&]( idx_t i, idx_t j ) {
-        ATLAS_ASSERT( i <= LO_cfg.ix_glb_max );
-        ATLAS_ASSERT( j <= LO_cfg.iy_glb_max );
+        ATLAS_ASSERT( i <= ix_glb_max );
+        ATLAS_ASSERT( j <= iy_glb_max );
         return glbarray_offset + j * glbarray_jstride + i;
     };
 
@@ -196,16 +191,16 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         ATLAS_ASSERT_MSG(orca_grid.nx() * orca_grid.ny() == SR.nb_real_nodes(),
           std::string("Size of the surrounding rectangle coord system does not match up with the size of the internal space in the orca_grid: ")
           + std::to_string(orca_grid.nx() * orca_grid.nx()) + " != " + std::to_string(SR.nb_real_nodes()) );
-        //ATLAS_ASSERT_MSG(nx_halo_WE == SR.nx_orca,
+        //ATLAS_ASSERT_MSG(nx_orca_halo == SR.nx_orca,
         //  std::string("Size of the surrounding rectangle x-space doesn't match up with orca-grid x-space: ")
-        //  + std::to_string(nx_halo_WE) + " != " + std::to_string(SR.nx_orca) );
-        //ATLAS_ASSERT_MSG(ny_halo_NS == SR.ny_orca,
+        //  + std::to_string(nx_orca_halo) + " != " + std::to_string(SR.nx_orca) );
+        //ATLAS_ASSERT_MSG(ny_orca_halo == SR.ny_orca,
         //  std::string("Size of the surrounding rectangle y-space doesn't match up with orca-grid y-space: ")
-        //  + std::to_string(ny_halo_NS) + " != " + std::to_string(SR.ny_orca) );
+        //  + std::to_string(ny_orca_halo) + " != " + std::to_string(SR.ny_orca) );
     }
 
     // define nodes and associated properties
-    mesh.nodes().resize(nx_halo_WE * ny_halo_NS);
+    mesh.nodes().resize(nx_orca_halo * ny_orca_halo);
     Nodes nodes( mesh );
 
     // define cells and associated properties
@@ -228,10 +223,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     std::vector<idx_t> node_index( SR.nx()*SR.ny(), -1 );
 
-    //std::ofstream logFile(distribution.type() + "-"
-    //    + std::to_string(halosize_) + "_p"
-    //    + std::to_string(mypart_) + ".log", std::ios_base::app);
-
     std::vector<idx_t> grid_fold_inodes;
     {
         ATLAS_TRACE( "nodes" );
@@ -243,7 +234,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         ATLAS_TRACE_SCOPE( "indexing" )
         for ( idx_t iy = 0; iy < SR.ny(); iy++ ) {
             idx_t iy_glb = SR.iy_min() + iy;
-            ATLAS_ASSERT( iy_glb < LO_cfg.ny_orca_halo );
+            ATLAS_ASSERT( iy_glb < ny_orca_halo );
             for ( idx_t ix = 0; ix < SR.nx(); ix++ ) {
                 idx_t ii = SR.index( ix, iy );
                 // node properties
@@ -267,7 +258,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         //atlas_omp_parallel_for( idx_t iy = 0; iy < SR.ny(); iy++ ) {
         for( idx_t iy = 0; iy < SR.ny(); iy++ ) {
             idx_t iy_glb = SR.iy_min() + iy;
-            ATLAS_ASSERT( iy_glb < LO_cfg.ny_orca_halo );
+            ATLAS_ASSERT( iy_glb < ny_orca_halo );
             double lon00 = orca_grid.xy( 0, 0 ).x();
             double west  = lon00 - 90.;
 
@@ -386,19 +377,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
                     nodes.water( inode ) = orca_grid.water( ix_glb, iy_glb );
                     nodes.halo( inode ) = SR.halo[ii];
-                    //idx_t glb_i = ix_glb + orca_grid.haloWest();
-                    //idx_t glb_j = iy_glb + orca_grid.haloSouth();
-                    //auto iter = std::find_if(glb_ij_pairs.begin(), glb_ij_pairs.end(),
-                    //                [&](const std::pair<int, int>& p) {
-                    //                  return ( glb_i == p.first) && (glb_j == p.second);
-                    //                });
-                    //if (iter != glb_ij_pairs.end()) {
-                    //  logFile << "[" << mypart_ << "] is_node ii " << ii << " ix " << ix << " iy " << iy
-                    //          << " glb_i " << glb_i << " glb_j " << glb_j << " remote index " << nodes.remote_idx(inode)
-                    //          << " lon " << nodes.lonlat(inode, 0) << " lat " << nodes.lonlat(inode, 1)
-                    //          << " halo " << nodes.halo(inode) << " partition " << nodes.part(inode)
-                    //          << " ghost " << nodes.ghost(inode) << std::endl;
-                    //}
                 }
             }
         }
@@ -439,7 +417,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
                     cells.node_connectivity.set( jcell, quad_nodes.data() );
                     cells.part( jcell )    = nodes.part( quad_nodes[0] );
-                    cells.glb_idx( jcell ) = ( iy_glb - LO_cfg.iy_glb_min ) * ( nx_halo_WE - 1 ) + ( ix_glb - LO_cfg.ix_glb_min ) + 1;
+                    cells.glb_idx( jcell ) = ( iy_glb - iy_glb_min ) * ( nx_orca_halo - 1 ) + ( ix_glb - ix_glb_min ) + 1;
 
                     if ( iy_glb >= SR_cfg.ny_glb - 1 ) {
                         cells.flags( jcell ).set( Topology::GHOST );

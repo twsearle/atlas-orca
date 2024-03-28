@@ -17,11 +17,6 @@
 namespace eckit {
 class Parametrisation;
 }
-
-namespace atlas {
-class OrcaGrid;
-}  // namespace atlas
-
 #endif
 
 namespace atlas {
@@ -29,26 +24,39 @@ namespace orca {
 namespace meshgenerator {
 
 //----------------------------------------------------------------------------------------------------------------------
-LocalOrcaGrid::LocalOrcaGrid( const Grid& grid, const SurroundingRectangle& rectangle, const Configuration& cfg ) :
-        orca_(grid), cfg_(cfg) {
+LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& rectangle) :
+        orca_(grid) {
+
+  ix_orca_min_ = rectangle.ix_min();
+  ix_orca_max_ = rectangle.ix_max();
+  iy_orca_min_ = rectangle.iy_min();
+  iy_orca_max_ = rectangle.iy_max();
+
   if (rectangle.ix_min() <= 0) {
-    ix_orca_min_ = rectangle.ix_min() - orca_.haloWest();
+    ix_orca_min_ -= orca_.haloWest();
   }
   if (rectangle.ix_max() >= orca_.nx()) {
-    ix_orca_max_ = rectangle.ix_max() + orca_.haloEast();
+    ix_orca_max_ += orca_.haloEast();
   }
   if (rectangle.iy_min() <= 0) {
-    iy_orca_min_ = rectangle.iy_min() - orca_.haloSouth();
+    iy_orca_min_ -= orca_.haloSouth();
   }
   if (rectangle.iy_max() >= orca_.ny()) {
-    iy_orca_max_ = rectangle.iy_max() + orca_.haloNorth();
+    iy_orca_max_ += orca_.haloNorth();
   }
+
+  std::cout << " ix_orca_min_ " <<  ix_orca_min_
+            << " ix_orca_max_ " <<  ix_orca_max_
+            << " iy_orca_min_ " <<  iy_orca_min_
+            << " iy_orca_max_ " <<  iy_orca_max_ << std::endl;
 
   // dimensions of the rectangle including the ORCA halo points
   nx_orca_ = ix_orca_max_ - ix_orca_min_;
   ny_orca_ = iy_orca_max_ - iy_orca_min_;
+  size_ = nx_orca_ * ny_orca_;
+  std::cout << "size_ " << size_ << std::endl;
 
-  // partitions and local indices in SR
+  // partitions and local indices in surrounding rectangle
   parts.resize( size_, -1 );
   halo.resize( size_, 0 );
   is_node.resize( size_, false );
@@ -57,30 +65,16 @@ LocalOrcaGrid::LocalOrcaGrid( const Grid& grid, const SurroundingRectangle& rect
     //atlas_omp_parallel_for( idx_t iy = 0; iy < ny_; iy++ )
     for( size_t iy = 0; iy < ny_orca_; iy++ ) {
       for ( size_t ix = 0; ix < nx_orca_; ix++ ) {
-        // TODO: identify partition based on rectangle partition + orca info
-        // TODO: identify halo based on halo partition + orca info
-        bool halo_found = false;
         idx_t ii = index( ix, iy );
         idx_t reg_ii = 0;
-        if (ix < rectangle.nx() && iy < rectangle.ny()) {
-          reg_ii = rectangle.index(ix, iy);
-        } else if (ix < rectangle.nx()) {
-          reg_ii = rectangle.index(ix, rectangle.ny()-1);
-        } else {
-          reg_ii = rectangle.index(rectangle.nx()-1, iy);
-        }
+        // clamp information to values in the surrounding rectangle if they lie in the orca halo
+        // TODO: Use orca grid periodicity information to inform ghost/halo/partition info?
+        reg_ii = rectangle.index(ix < rectangle.nx() ? ix : rectangle.nx()-1,
+                                 iy < rectangle.ny() ? iy : rectangle.ny()-1);
         parts.at( ii )    = rectangle.parts.at( reg_ii );
         halo.at( ii )     = rectangle.halo.at( reg_ii );
         is_node.at( ii )  = rectangle.is_node.at( reg_ii );
         is_ghost.at( ii ) = rectangle.is_ghost.at( reg_ii );
-        int halo_dist = cfg_.halosize;
-        if ((cfg_.halosize > 0) && parts.at( ii ) != cfg_.mypart ) {
-          if (halo_found) {
-            halo.at( ii ) = halo_dist;
-          }
-        }
-
-        is_ghost.at( ii ) = ( parts.at( ii ) != cfg_.mypart );
       }
     }
   }
@@ -103,7 +97,7 @@ LocalOrcaGrid::LocalOrcaGrid( const Grid& grid, const SurroundingRectangle& rect
         is_cell.at(ii) = true;
       }
     };
-    // Loop over all elements in rectangle
+    // Loop over all elements to determine which are required
     nb_cells_ = 0;
     nb_real_nodes_ = 0;
     nb_ghost_nodes_ = 0;

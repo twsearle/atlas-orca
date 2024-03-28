@@ -24,11 +24,6 @@
 namespace eckit {
 class Parametrisation;
 }
-
-namespace atlas {
-class OrcaGrid;
-}  // namespace atlas
-
 #endif
 
 namespace atlas {
@@ -38,46 +33,11 @@ namespace meshgenerator {
 //----------------------------------------------------------------------------------------------------------------------
 class LocalOrcaGrid {
  public:
-    struct Configuration {
-        int nparts;
-        int mypart;
-        int halosize;
-        int ny_orca_halo;
-        int iy_glb_min;
-        int iy_glb_max;
-        int ix_glb_max;
-        int ix_glb_min;
-        Configuration() :
-            nparts(std::numeric_limits<int>::lowest())
-            , mypart(std::numeric_limits<int>::lowest())
-            , halosize(std::numeric_limits<int>::lowest())
-            , ny_orca_halo(std::numeric_limits<int>::lowest())
-            , iy_glb_min(std::numeric_limits<int>::lowest())
-            , iy_glb_max(std::numeric_limits<int>::lowest())
-            , ix_glb_max(std::numeric_limits<int>::lowest())
-            , ix_glb_min(std::numeric_limits<int>::lowest()) {}
-        void check_consistency() const {
-            const auto check = [&](const int value) {
-                if (value == std::numeric_limits<int>::lowest())
-                  eckit::BadParameter("atlas-orca/meshgenerator/LocalOrcaGrid: not all parameters set"); 
-            };
-            check(nparts);
-            check(mypart);
-            check(halosize);
-            check(ny_orca_halo);
-            check(iy_glb_min);
-            check(iy_glb_max);
-            check(ix_glb_max);
-            check(ix_glb_min);
-        }
-    };
-
     std::vector<int> parts;
     std::vector<int> halo;
     std::vector<int> is_ghost;
     std::vector<int> is_node;
     uint64_t size() const {return size_;}
-    uint64_t halosize() const {return cfg_.halosize;}
     int ix_orca_min() const {return ix_orca_min_;}
     int ix_orca_max() const {return ix_orca_max_;}
     int iy_orca_min() const {return iy_orca_min_;}
@@ -89,10 +49,9 @@ class LocalOrcaGrid {
     uint64_t nb_cells() const {return nb_cells_;}
 
     int index( int i, int j ) const;
-    LocalOrcaGrid( const Grid& grid, const SurroundingRectangle& rectangle, const Configuration& cfg );
+    LocalOrcaGrid( const OrcaGrid& grid, const SurroundingRectangle& rectangle );
  private:
     const OrcaGrid orca_;
-    const Configuration cfg_;
     uint64_t size_;
     int ix_orca_min_;
     int ix_orca_max_;

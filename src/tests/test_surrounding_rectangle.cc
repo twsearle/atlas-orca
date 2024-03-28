@@ -112,14 +112,6 @@ CASE("test surrounding rectangle ") {
         + std::to_string(cfg.mypart) + ".csv");
 
       functionspace::NodeColumns regular_fs(regular_mesh);
-      Field field_ghost = regular_fs.createField<int>(option::name("is_ghost"));
-      auto fview_ghost = array::make_view<int, 1>(field_ghost);
-      Field field_node = regular_fs.createField<int>(option::name("is_node"));
-      auto fview_node = array::make_view<int, 1>(field_node);
-      Field field_halo = regular_fs.createField<int>(option::name("is_halo"));
-      auto fview_halo = array::make_view<int, 1>(field_halo);
-      Field field_part = regular_fs.createField<int>(option::name("part_check"));
-      auto fview_part = array::make_view<int, 1>(field_part);
       std::vector<int> indices;
       std::vector<bool> this_partition;
       for (uint64_t j = 0; j < rectangle.ny(); j++) {
@@ -151,24 +143,6 @@ CASE("test surrounding rectangle ") {
             this_partition.emplace_back(false);
           }
 
-          if (reg_grid_remote_idx >= fview_halo.shape(0))
-            std::cout << " reg_grid_remote_idx " << reg_grid_remote_idx << std::endl;
-          //EXPECT(reg_grid_remote_idx < fview_halo.shape(0));
-
-          //fview_halo(reg_grid_remote_idx) == 0;
-          //if (rectangle.halo.at(ii) > 0) {
-          //  fview_halo(regular_grid.index(ix_glb, iy_glb)) == 1;
-          //  // all halo nodes should be ghost nodes
-          //  //EXPECT(rectangle.is_ghost.at(ii));
-          //}
-          //fview_node(regular_grid.index(ix_glb, iy_glb)) == 0;
-          //if (rectangle.is_node.at(ii)) {
-          //  fview_node(regular_grid.index(ix_glb, iy_glb)) == 1;
-          //}
-          //fview_ghost(regular_grid.index(ix_glb, iy_glb)) == 0;
-          //if (rectangle.is_ghost.at(ii)) {
-          //  fview_ghost(regular_grid.index(ix_glb, iy_glb)) == 1;
-          //}
           // If it is not a ghost node, it must be a node, however some ghost
           // nodes are also nodes.
           // TODO: Understand what is going on with this!
@@ -218,10 +192,6 @@ CASE("test surrounding rectangle ") {
                               ".msh",
                           Config("coordinates", "xy") | Config("info", true));
         gmsh.write(regular_mesh);
-        gmsh.write(field_ghost);
-        gmsh.write(field_node);
-        gmsh.write(field_halo);
-        gmsh.write(field_part);
       }
 
       if (cfg.nparts == 2) {

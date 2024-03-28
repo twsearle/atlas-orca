@@ -10,41 +10,22 @@
 
 #include "SurroundingRectangle.h"
 
-#include <unordered_set>
 #include <algorithm>
 #include <numeric>
-#include <tuple>
 #include <utility>
 #include <fstream>
 #include <iomanip>
 
-#include "eckit/utils/Hash.h"
-
 #include "atlas/array/Array.h"
-#include "atlas/array/ArrayView.h"
-#include "atlas/array/IndexView.h"
-#include "atlas/array/MakeView.h"
 #include "atlas/field/Field.h"
 #include "atlas/grid/Distribution.h"
 #include "atlas/grid/Partitioner.h"
-#include "atlas/grid/Spacing.h"
-#include "atlas/grid/StructuredGrid.h"
-#include "atlas/library/config.h"
-#include "atlas/mesh/ElementType.h"
-#include "atlas/mesh/Elements.h"
-#include "atlas/mesh/HybridElements.h"
-#include "atlas/mesh/Mesh.h"
-#include "atlas/mesh/Nodes.h"
-#include "atlas/meshgenerator/detail/MeshGeneratorFactory.h"
-#include "atlas/meshgenerator/detail/StructuredMeshGenerator.h"
 #include "atlas/parallel/mpi/mpi.h"
 #include "atlas/runtime/Exception.h"
 #include "atlas/runtime/Log.h"
 #include "atlas/util/Constants.h"
 #include "atlas/util/CoordinateEnums.h"
 #include "atlas/util/Geometry.h"
-#include "atlas/util/NormaliseLongitude.h"
-#include "atlas/util/Topology.h"
 
 
 namespace atlas {
@@ -99,7 +80,7 @@ SurroundingRectangle::SurroundingRectangle(
   // TODO: These "bounds"  are on the imaginary wrapped rectangle including halo and periodic points.
   // points out of bounds of the reglatlon grid are either in the orca halo points, or are in the halo
   {
-    ATLAS_TRACE( "bounds" );
+    ATLAS_TRACE( "find rectangle bounds" );
     atlas_omp_parallel {
       int ix_min_TP = ix_min_;
       int ix_max_TP = ix_max_;
@@ -164,7 +145,7 @@ SurroundingRectangle::SurroundingRectangle(
     }
   }
 
-  // dimensions of the surrounding rectangle (SR)
+  // dimensions of the surrounding rectangle
   nx_ = ix_max_ - ix_min_;
   ny_ = iy_max_ - iy_min_;
 
@@ -224,7 +205,7 @@ SurroundingRectangle::SurroundingRectangle(
   // determine number of cells and number of nodes
   uint16_t nb_halo_nodes = 0;
   {  // Compute SR.is_node
-    ATLAS_TRACE( "is_node" );
+    ATLAS_TRACE( "compute rectangle is_node" );
     std::vector<int> is_cell(size, false);
     auto mark_node_used = [&]( int ix, int iy ) {
       idx_t ii = index( ix, iy );
