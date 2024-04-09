@@ -88,11 +88,11 @@ CASE("test surrounding local_orca ") {
 
       std::vector<int> indices;
       std::vector<bool> this_partition;
-      for (uint64_t j = 0; j < local_orca.ny_orca(); j++) {
-        int iy_glb = local_orca.iy_orca_min() + j;
+      for (uint64_t j = 0; j < local_orca.ny(); j++) {
+        int iy_glb = local_orca.iy_min() + j;
         EXPECT(iy_glb < grid.ny() + grid.haloNorth() + grid.haloSouth());
-        for (uint64_t i = 0; i < local_orca.nx_orca(); i++) {
-          int ix_glb = local_orca.ix_orca_min() + i;
+        for (uint64_t i = 0; i < local_orca.nx(); i++) {
+          int ix_glb = local_orca.ix_min() + i;
           EXPECT(ix_glb < grid.nx() + grid.haloWest() + grid.haloEast());
           auto ii = local_orca.index(i, j);
           indices.emplace_back(ii);
@@ -113,7 +113,7 @@ CASE("test surrounding local_orca ") {
       int total_is_ghost =
           std::count(local_orca.is_ghost.begin(), local_orca.is_ghost.end(), true);
       EXPECT(total_is_node + total_is_ghost >= indices.size());
-      EXPECT(indices.size() == local_orca.nx_orca() * local_orca.ny_orca());
+      EXPECT(indices.size() == local_orca.nx() * local_orca.ny());
 
       {
         // diagnostics
@@ -128,10 +128,10 @@ CASE("test surrounding local_orca ") {
                   << " grid.haloSouth() " << grid.haloSouth()
                   << std::endl;
         std::cout << "[" << cfg.mypart << "]"
-                  << " ix_orca_min " << local_orca.ix_orca_min() << " ix_orca_max "
-                  << local_orca.ix_orca_max() << " iy_orca_min " << local_orca.iy_orca_min()
-                  << " iy_orca_max " << local_orca.iy_orca_max() << " indices.size() "
-                  << indices.size() << " nx*ny " << local_orca.nx_orca() * local_orca.ny_orca()
+                  << " ix_orca_min " << local_orca.ix_min() << " ix_orca_max "
+                  << local_orca.ix_max() << " iy_orca_min " << local_orca.iy_min()
+                  << " iy_orca_max " << local_orca.iy_max() << " indices.size() "
+                  << indices.size() << " nx*ny " << local_orca.nx() * local_orca.ny()
                   << " number on this partition " << total_on_partition
                   << " number not on partition " << not_on_partition << std::endl;
 
@@ -144,16 +144,16 @@ CASE("test surrounding local_orca ") {
 
       if (cfg.nparts == 2) {
         if (cfg.mypart == 0) {
-          EXPECT(local_orca.iy_orca_min() == -1);
-          EXPECT(local_orca.iy_orca_max() == 146 + halo);
-          EXPECT(local_orca.ix_orca_min() == -1 - halo);
-          EXPECT(local_orca.ix_orca_max() == 89 + halo);
+          EXPECT(local_orca.iy_min() == -1);
+          EXPECT(local_orca.iy_max() == 146 + halo);
+          EXPECT(local_orca.ix_min() == -1 - halo);
+          EXPECT(local_orca.ix_max() == 89 + halo);
         }
         if (cfg.mypart == 1) {
-          EXPECT(local_orca.iy_orca_min() == -1);
-          EXPECT(local_orca.iy_orca_max() == 146 + halo);
-          EXPECT(local_orca.ix_orca_min() == 90 - halo);
-          EXPECT(local_orca.ix_orca_max() == 179 + halo);
+          EXPECT(local_orca.iy_min() == -1);
+          EXPECT(local_orca.iy_max() == 146 + halo);
+          EXPECT(local_orca.ix_min() == 90 - halo);
+          EXPECT(local_orca.ix_max() == 179 + halo);
         }
       }
     }

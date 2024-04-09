@@ -19,9 +19,7 @@ class Parametrisation;
 }
 #endif
 
-namespace atlas {
-namespace orca {
-namespace meshgenerator {
+namespace atlas::orca::meshgenerator {
 
 //----------------------------------------------------------------------------------------------------------------------
 LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& rectangle) :
@@ -116,14 +114,46 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
       }
     }
   }
+
+  // setup normalisation objects
+  {
+    lon00_ = orca_.xy( 0, 0 ).x();
+    lon00_normaliser_ = util::NormaliseLongitude(lon00_ - 180. );
+
+  }
 }
-int LocalOrcaGrid::index( int i, int j ) const {
-  ATLAS_ASSERT_MSG(static_cast<size_t>(i) < nx_orca_,
-     std::string("i >= nx_orca_: ") + std::to_string(i) + " >= " + std::to_string(nx_orca_));
-  ATLAS_ASSERT_MSG(static_cast<size_t>(j) < ny_orca_,
-    std::string("j >= ny_orca_: ") + std::to_string(j) + " >= " + std::to_string(ny_orca_));
-  return j * nx_orca_ + i;
+int LocalOrcaGrid::index( int ix, int iy ) const {
+  ATLAS_ASSERT_MSG(static_cast<size_t>(ix) < nx_orca_,
+     std::string("ix >= nx_orca_: ") + std::to_string(ix) + " >= " + std::to_string(nx_orca_));
+  ATLAS_ASSERT_MSG(static_cast<size_t>(iy) < ny_orca_,
+    std::string("iy >= ny_orca_: ") + std::to_string(iy) + " >= " + std::to_string(ny_orca_));
+  return iy * nx_orca_ + ix;
 }
-}  // namespace meshgenerator
-}  // namespace orca
-}  // namespace atlas
+
+PointIJ LocalOrcaGrid::global_ij( idx_t ix, idx_t iy ) const {
+  return PointIJ(ix_orca_min_ + ix, iy_orca_min_ + iy);
+}
+
+const PointXY& LocalOrcaGrid::grid_xy( idx_t ix, idx_t iy ) const {
+  const auto ij = this->global_ij( ix, iy );
+  return orca_.xy( ij.i, ij.j );
+}
+
+PointXY LocalOrcaGrid::normalised_grid_xy( idx_t ix, idx_t iy ) const {
+  double west  = lon00_ - 90.;
+  const auto ij = this->global_ij( ix, iy );
+  const PointXY xy = orca_.xy( ij.i, ij.j );
+  double lon1 = lon00_normaliser_( orca_.xy( 1, ij.j ).x() );
+  if ( lon1 < lon00_ - 10. ) {
+      west = lon00_ - 20.;
+  }
+
+  if ( ij.i < nx_orca_ / 2 ) {
+    auto lon_first_half_normaliser  = util::NormaliseLongitude{west};
+    return PointXY( lon_first_half_normaliser( xy.x() ), xy.y() );
+  } else {
+    auto lon_second_half_normaliser = util::NormaliseLongitude{lon00_ + 90.};
+    return PointXY( lon_second_half_normaliser( xy.x() ), xy.y() );
+  }
+}
+}  // namespace atlas::orca::meshgenerator

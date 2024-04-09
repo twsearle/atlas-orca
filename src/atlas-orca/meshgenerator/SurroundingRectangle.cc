@@ -28,9 +28,7 @@
 #include "atlas/util/Geometry.h"
 
 
-namespace atlas {
-namespace orca {
-namespace meshgenerator {
+namespace atlas::orca::meshgenerator {
 
 namespace {
 int wrap( idx_t value, idx_t lower, idx_t upper ) {
@@ -162,7 +160,6 @@ SurroundingRectangle::SurroundingRectangle(
   halo.resize( size, 0 );
   is_ghost.resize( size, true );
   // vectors marking nodes that are necessary for this proc's cells
-  is_node.resize( size, false );
 
   {
     ATLAS_TRACE( "partition, is_ghost, halo" );
@@ -202,65 +199,15 @@ SurroundingRectangle::SurroundingRectangle(
       }
     }
   }
-  // determine number of cells and number of nodes
-  uint16_t nb_halo_nodes = 0;
-  {  // Compute SR.is_node
-    ATLAS_TRACE( "compute rectangle is_node" );
-    std::vector<int> is_cell(size, false);
-    auto mark_node_used = [&]( int ix, int iy ) {
-      idx_t ii = index( ix, iy );
-      if ( !is_node.at(ii) ) {
-        ++nb_real_nodes_;
-        is_node.at(ii) = true;
-      }
-    };
-    auto mark_cell_used = [&]( int ix, int iy ) {
-      idx_t ii = index( ix, iy );
-      if ( !is_cell.at(ii) ) {
-        ++nb_cells_;
-        is_cell.at(ii) = true;
-      }
-    };
-    // Loop over all elements in rectangle
-    nb_cells_ = 0;
-    nb_real_nodes_ = 0;
-    nb_ghost_nodes_ = 0;
-    for ( idx_t iy = 0; iy < ny_-1; iy++ ) {
-      for ( idx_t ix = 0; ix < nx_-1; ix++ ) {
-        if ( is_ghost[index( ix, iy )]) {
-          ++nb_ghost_nodes_;
-          if ( halo[index( ix, iy )] != 0)
-            ++nb_halo_nodes;
-        } else {
-          mark_cell_used( ix, iy );
-          mark_node_used( ix, iy );
-          mark_node_used( ix + 1, iy );
-          mark_node_used( ix + 1, iy + 1 );
-          mark_node_used( ix, iy + 1 );
-        } // if not ghost index
-      }
-    }
-  }
-    logFile << std::setw(5) << std::setfill('0');
-    logFile << "[" << cfg_.mypart << "] nx                      = " << nx_ << std::endl;
-    logFile << "[" << cfg_.mypart << "] ny                      = " << ny_ << std::endl;
-    logFile << "[" << cfg_.mypart << "] halosize                = " << cfg_.halosize << std::endl;
-    logFile << "[" << cfg_.mypart << "] ny * nx_                = " << ny_ * nx_ << std::endl;
-    logFile << "[" << cfg_.mypart << "] ny * (nx_ + 2*halosize) = " << ny_ * (nx_ + 2*cfg_.halosize) << std::endl;
-    logFile << "[" << cfg_.mypart << "] nb_real_nodes           = " << nb_real_nodes_ << std::endl;
-    logFile << "[" << cfg_.mypart << "] nb_halo_nodes           = " << nb_halo_nodes << std::endl;
-    logFile << "[" << cfg_.mypart << "] nb_ghost_nodes_          = " << nb_ghost_nodes_ << std::endl;
-    logFile << "[" << cfg_.mypart << "] nb_real_nodes_owned_by_rectangle = " << nb_real_nodes_owned_by_rectangle << std::endl;
-    logFile << "[" << cfg_.mypart << "] end of SR output" << std::endl;
-    logFile.close();
+  logFile << std::setw(5) << std::setfill('0');
+  logFile << "[" << cfg_.mypart << "] nx                      = " << nx_ << std::endl;
+  logFile << "[" << cfg_.mypart << "] ny                      = " << ny_ << std::endl;
+  logFile << "[" << cfg_.mypart << "] halosize                = " << cfg_.halosize << std::endl;
+  logFile << "[" << cfg_.mypart << "] ny * nx_                = " << ny_ * nx_ << std::endl;
+  logFile << "[" << cfg_.mypart << "] ny * (nx_ + 2*halosize) = " << ny_ * (nx_ + 2*cfg_.halosize) << std::endl;
+  logFile << "[" << cfg_.mypart << "] nb_real_nodes_owned_by_rectangle = " << nb_real_nodes_owned_by_rectangle << std::endl;
+  logFile << "[" << cfg_.mypart << "] end of SR output" << std::endl;
+  logFile.close();
+}
 
-    ATLAS_ASSERT_MSG(nb_real_nodes_owned_by_rectangle >= nb_real_nodes_, "SurroundingRectangle:: more rectangle mesh nodes on this proc than nodes owned by this rectangle"
-                        + std::to_string(nb_real_nodes_owned_by_rectangle) + " >!= " + std::to_string(nb_real_nodes_));
-
-    ATLAS_ASSERT_MSG(nb_halo_nodes <= nb_ghost_nodes_, "SurroundingRectangle:: more halo nodes than ghost nodes in rectangle, so cannot be a subset of ghost nodes "
-                        + std::to_string(nb_halo_nodes) + " <!= " + std::to_string(nb_ghost_nodes_));
-  }
-
-}  // namespace meshgenerator
-}  // namespace orca
-}  // namespace atlas
+}  // namespace atlas::orca::meshgenerator 

@@ -34,9 +34,7 @@ class Distribution;
 }  // namespace atlas
 #endif
 
-namespace atlas {
-namespace orca {
-namespace meshgenerator {
+namespace atlas::orca::meshgenerator {
 
 //----------------------------------------------------------------------------------------------------------------------
 //
@@ -72,16 +70,12 @@ class SurroundingRectangle {
     std::vector<int> parts;
     std::vector<int> halo;
     std::vector<int> is_ghost;
-    std::vector<char> is_node;
     uint64_t nx() const { return nx_; };
     uint64_t ny() const { return ny_; };
     int ix_min() const { return ix_min_; };
     int iy_min() const { return iy_min_; };
     int ix_max() const { return ix_max_; };
     int iy_max() const { return iy_max_; };
-    uint64_t nb_real_nodes() const { return nb_real_nodes_; };
-    uint64_t nb_ghost_nodes() const { return nb_ghost_nodes_; };
-    uint64_t nb_cells() const { return nb_cells_; };
 
  private:
     const grid::Distribution distribution_;
@@ -90,10 +84,6 @@ class SurroundingRectangle {
     uint64_t nx_, ny_;
     int ix_min_, ix_max_;
     int iy_min_, iy_max_;
-    uint64_t nb_real_nodes_, nb_ghost_nodes_;
-    uint64_t nb_cells_;
     uint64_t nb_real_nodes_owned_by_rectangle;
 };
-}  // namespace meshgenerator
-}  // namespace orca
-}  // namespace atlas
+}  // namespace atlas::orca::meshgenerator 

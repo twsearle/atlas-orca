@@ -16,8 +16,10 @@
 #include "atlas/meshgenerator/MeshGenerator.h"
 #include "atlas/util/Config.h"
 #include "atlas/grid/Distribution.h"
+#include "atlas/util/Point.h"
 #include "atlas-orca/grid/OrcaGrid.h"
 #include "atlas-orca/meshgenerator/SurroundingRectangle.h"
+#include "atlas-orca/util/PointIJ.h"
 
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -26,9 +28,7 @@ class Parametrisation;
 }
 #endif
 
-namespace atlas {
-namespace orca {
-namespace meshgenerator {
+namespace atlas::orca::meshgenerator {
 
 //----------------------------------------------------------------------------------------------------------------------
 class LocalOrcaGrid {
@@ -38,15 +38,18 @@ class LocalOrcaGrid {
     std::vector<int> is_ghost;
     std::vector<int> is_node;
     uint64_t size() const {return size_;}
-    int ix_orca_min() const {return ix_orca_min_;}
-    int ix_orca_max() const {return ix_orca_max_;}
-    int iy_orca_min() const {return iy_orca_min_;}
-    int iy_orca_max() const {return iy_orca_max_;}
-    uint64_t nx_orca() const {return nx_orca_;}
-    uint64_t ny_orca() const {return ny_orca_;}
+    int ix_min() const {return ix_orca_min_;}
+    int ix_max() const {return ix_orca_max_;}
+    int iy_min() const {return iy_orca_min_;}
+    int iy_max() const {return iy_orca_max_;}
+    uint64_t nx() const {return nx_orca_;}
+    uint64_t ny() const {return ny_orca_;}
     uint64_t nb_real_nodes() const {return nb_real_nodes_;}
     uint64_t nb_ghost_nodes() const {return nb_ghost_nodes_;}
     uint64_t nb_cells() const {return nb_cells_;}
+    PointIJ global_ij( idx_t ix, idx_t iy ) const;
+    const PointXY& grid_xy( idx_t ix, idx_t iy ) const;
+    PointXY normalised_grid_xy( idx_t ix, idx_t iy ) const;
 
     int index( int i, int j ) const;
     LocalOrcaGrid( const OrcaGrid& grid, const SurroundingRectangle& rectangle );
@@ -62,7 +65,7 @@ class LocalOrcaGrid {
     uint64_t nb_real_nodes_;
     uint64_t nb_ghost_nodes_;
     uint64_t nb_cells_;
+    double lon00_;
+    util::NormaliseLongitude lon00_normaliser_;
 };
-}  // namespace meshgenerator
-}  // namespace orca
-}  // namespace atlas
+}  // namespace atlas::orca::meshgenerator

@@ -95,21 +95,17 @@ CASE("test surrounding rectangle ") {
       auto fview_glb_idx =
           array::make_view<gidx_t, 1>(regular_mesh.nodes().global_index());
 
-    std::ofstream nodeFile(std::string("is_node_") + distribution.type() + "-"
-        + std::to_string(cfg.halosize) + "_p"
-        + std::to_string(cfg.mypart) + ".csv");
+      std::ofstream ghostFile(std::string("is_ghost_") + distribution.type() + "-"
+          + std::to_string(cfg.halosize) + "_p"
+          + std::to_string(cfg.mypart) + ".csv");
 
-    std::ofstream ghostFile(std::string("is_ghost_") + distribution.type() + "-"
-        + std::to_string(cfg.halosize) + "_p"
-        + std::to_string(cfg.mypart) + ".csv");
+      std::ofstream haloFile(std::string("is_halo_") + distribution.type() + "-"
+          + std::to_string(cfg.halosize) + "_p"
+          + std::to_string(cfg.mypart) + ".csv");
 
-    std::ofstream haloFile(std::string("is_halo_") + distribution.type() + "-"
-        + std::to_string(cfg.halosize) + "_p"
-        + std::to_string(cfg.mypart) + ".csv");
-
-    std::ofstream partFile(std::string("parts_") + distribution.type() + "-"
-        + std::to_string(cfg.halosize) + "_p"
-        + std::to_string(cfg.mypart) + ".csv");
+      std::ofstream partFile(std::string("parts_") + distribution.type() + "-"
+          + std::to_string(cfg.halosize) + "_p"
+          + std::to_string(cfg.mypart) + ".csv");
 
       functionspace::NodeColumns regular_fs(regular_mesh);
       std::vector<int> indices;
@@ -124,7 +120,6 @@ CASE("test surrounding rectangle ") {
           indices.emplace_back(ii);
 
           haloFile  << i << ", " << j << ", " << rectangle.halo.at(ii) << std::endl;
-          nodeFile  << i << ", " << j << ", " << (rectangle.is_node.at(ii) ? 1 : 0) << std::endl;
           ghostFile << i << ", " << j << ", " << rectangle.is_ghost.at(ii) << std::endl;
           partFile << i << ", " << j << ", " << rectangle.parts.at(ii) << std::endl;
 
@@ -147,22 +142,16 @@ CASE("test surrounding rectangle ") {
           // nodes are also nodes.
           // TODO: Understand what is going on with this!
           if (!rectangle.is_ghost.at(ii)) {
-            if (!rectangle.is_node.at(ii)) {
               std::cout << "[" << cfg.mypart << "] i " << i << " j " << j << " ii " << ii << std::endl;
-            }
           }
         }
       }
       haloFile.close();
-      nodeFile.close();
       ghostFile.close();
       partFile.close();
 
-      int total_is_node =
-          std::count(rectangle.is_node.begin(), rectangle.is_node.end(), true);
       int total_is_ghost =
           std::count(rectangle.is_ghost.begin(), rectangle.is_ghost.end(), true);
-      EXPECT(total_is_node + total_is_ghost >= indices.size());
 
       EXPECT(indices.size() == rectangle.nx() * rectangle.ny());
 
