@@ -10,6 +10,7 @@
 
 #include <limits>
 
+#include "atlas/util/Topology.h"
 #include "atlas-orca/meshgenerator/LocalOrcaGrid.h"
 
 
@@ -72,6 +73,10 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         parts.at( ii )    = rectangle.parts.at( reg_ii );
         halo.at( ii )     = rectangle.halo.at( reg_ii );
         is_ghost.at( ii ) = rectangle.is_ghost.at( reg_ii );
+        const auto ij_glb = this->global_ij( ix, iy );
+        if ( ij_glb.j > 0 or ij_glb.i < 0 ) {
+          is_ghost.at( ii ) = is_ghost.at( ii ) || orca_.ghost( ij_glb.i, ij_glb.j );
+        }
       }
     }
   }
@@ -122,7 +127,7 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 
   }
 }
-int LocalOrcaGrid::index( int ix, int iy ) const {
+int LocalOrcaGrid::index( idx_t ix, idx_t iy ) const {
   ATLAS_ASSERT_MSG(static_cast<size_t>(ix) < nx_orca_,
      std::string("ix >= nx_orca_: ") + std::to_string(ix) + " >= " + std::to_string(nx_orca_));
   ATLAS_ASSERT_MSG(static_cast<size_t>(iy) < ny_orca_,
@@ -155,5 +160,106 @@ PointXY LocalOrcaGrid::normalised_grid_xy( idx_t ix, idx_t iy ) const {
     auto lon_second_half_normaliser = util::NormaliseLongitude{lon00_ + 90.};
     return PointXY( lon_second_half_normaliser( xy.x() ), xy.y() );
   }
+}
+
+// unique global index of the orca grid excluding orca grid halos (orca halo points are wrapped to their master index).
+// Note: right now need to add +1 to this to fill the field with corresponding name.
+gidx_t LocalOrcaGrid::master_global_index( idx_t ix, idx_t iy ) const {
+  auto ij = this->global_ij(ix, iy);
+  return orca_.periodicIndex( ij.i, ij.j );
+}
+
+PointIJ LocalOrcaGrid::master_global_ij( idx_t ix, idx_t iy ) const {
+  const auto master_idx = this->master_global_index( ix, iy );
+  idx_t ix_glb_master, iy_glb_master;
+  orca_.index2ij( master_idx, ix_glb_master, iy_glb_master );
+  return PointIJ(ix_glb_master, iy_glb_master);
+}
+
+PointLonLat LocalOrcaGrid::normalised_grid_master_lonlat( idx_t ix, idx_t iy ) const {
+  double west  = lon00_ - 90.;
+  const auto ij = this->global_ij( ix, iy );
+  const auto master_ij = this->master_global_ij( ix, iy );
+
+  const PointLonLat lonlat = orca_.lonlat( master_ij.i, master_ij.j );
+
+  double lon1 = lon00_normaliser_( orca_.xy( 1, ij.j ).x() );
+  if ( lon1 < lon00_ - 10. ) {
+      west = lon00_ - 20.;
+  }
+
+  if ( ij.i < nx_orca_ / 2 ) {
+    auto lon_first_half_normaliser  = util::NormaliseLongitude{west};
+    return PointLonLat( lon_first_half_normaliser( lonlat.lon() ), lonlat.lat() );
+  } else {
+    auto lon_second_half_normaliser = util::NormaliseLongitude{lon00_ + 90.};
+    return PointLonLat( lon_second_half_normaliser( lonlat.lon() ), lonlat.lat() );
+  }
+}
+
+// unique global index of the orca grid including orca grid halos.
+idx_t LocalOrcaGrid::orca_haloed_global_grid_index( idx_t ix, idx_t iy ) const {
+  // global grid properties
+  auto iy_glb_min = -orca_.haloSouth();
+  auto ix_glb_min = -orca_.haloWest();
+  idx_t glbarray_offset  = -( nx_orca_ * iy_glb_min ) - ix_glb_min;
+  idx_t glbarray_jstride = nx_orca_;
+
+  const auto ij = this->global_ij( ix, iy );
+  ATLAS_ASSERT( ij.i <= orca_.haloEast() + orca_.nx() );
+  ATLAS_ASSERT( ij.j <= iy_glb_min + ny_orca_ );
+  return glbarray_offset + ij.j * glbarray_jstride + ij.i;
+}
+
+void LocalOrcaGrid::flags( idx_t ix, idx_t iy, util::detail::BitflagsView<int>& flag_view ) const {
+  flag_view.reset();
+  const auto ij_glb = this->global_ij( ix, iy );
+  if ( this->is_ghost[this->index(ix, iy)] ) {
+    flag_view.set( util::Topology::GHOST );
+    if( this->orca_haloed_global_grid_index( ix, iy ) !=
+        this->master_global_index( ix, iy ) ) {
+      const auto normalised_xy = this->normalised_grid_xy( ix, iy );
+      if ( ij_glb.i >= orca_.nx() - orca_.haloWest() ) {
+        flag_view.set( util::Topology::PERIODIC );
+      }
+      else if ( ij_glb.i < orca_.haloEast() - 1 ) {
+        flag_view.set( util::Topology::PERIODIC );
+      }
+      if ( ij_glb.j >= orca_.ny() - orca_.haloNorth() - 1 ) {
+          flag_view.set( util::Topology::PERIODIC );
+          if ( normalised_xy.x() > lon00_ + 90. ) {
+              flag_view.set( util::Topology::EAST );
+          }
+          else {
+              flag_view.set( util::Topology::WEST );
+          }
+      }
+
+      if ( flag_view.check( util::Topology::PERIODIC ) ) {
+        // It can still happen that nodes were flagged as periodic wrongly
+        // e.g. where the grid folds into itself
+        auto lonlat_master = this->normalised_grid_master_lonlat(ix, iy);
+        if( std::abs(lonlat_master.lon() - normalised_xy.x()) < 1.e-12 ) {
+            flag_view.unset( util::Topology::PERIODIC );
+            // if (( std::abs(lonlat_master.lat() - normalised_xy.y()) < 1.e-12 ) &&
+            //     ( ij_glb.j >= orca_.ny() - orca_.haloNorth() - 1 ))
+            //     grid_fold_inodes.push_back(inode);
+        }
+      }
+    }
+  }
+
+  flag_view.set( orca_.land( ij_glb.i, ij_glb.j ) ? util::Topology::LAND : util::Topology::WATER );
+
+  if ( ij_glb.i <= 0 ) {
+    flag_view.set( util::Topology::BC | util::Topology::WEST );
+  }
+  else if ( ij_glb.j >= orca_.nx() ) {
+    flag_view.set( util::Topology::BC | util::Topology::EAST );
+  }
+}
+bool LocalOrcaGrid::water( idx_t ix, idx_t iy ) const {
+  const auto ij_glb = this->global_ij( ix, iy );
+  return orca_.water( ij_glb.i, ij_glb.j );
 }
 }  // namespace atlas::orca::meshgenerator

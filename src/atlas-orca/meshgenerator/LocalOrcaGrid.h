@@ -17,6 +17,7 @@
 #include "atlas/util/Config.h"
 #include "atlas/grid/Distribution.h"
 #include "atlas/util/Point.h"
+#include "atlas/util/Bitflags.h"
 #include "atlas-orca/grid/OrcaGrid.h"
 #include "atlas-orca/meshgenerator/SurroundingRectangle.h"
 #include "atlas-orca/util/PointIJ.h"
@@ -47,12 +48,19 @@ class LocalOrcaGrid {
     uint64_t nb_real_nodes() const {return nb_real_nodes_;}
     uint64_t nb_ghost_nodes() const {return nb_ghost_nodes_;}
     uint64_t nb_cells() const {return nb_cells_;}
+
+    int index( idx_t ix, idx_t iy ) const;
+    LocalOrcaGrid( const OrcaGrid& grid, const SurroundingRectangle& rectangle );
     PointIJ global_ij( idx_t ix, idx_t iy ) const;
     const PointXY& grid_xy( idx_t ix, idx_t iy ) const;
     PointXY normalised_grid_xy( idx_t ix, idx_t iy ) const;
+    PointIJ master_global_ij( idx_t ix, idx_t iy ) const;
+    gidx_t master_global_index( idx_t ix, idx_t iy ) const;
+    PointLonLat normalised_grid_master_lonlat( idx_t ix, idx_t iy ) const;
+    idx_t orca_haloed_global_grid_index( idx_t ix, idx_t iy ) const;
+    void flags( idx_t ix, idx_t iy, util::detail::BitflagsView<int>& flag_view ) const;
+    bool water( idx_t ix, idx_t iy ) const;
 
-    int index( int i, int j ) const;
-    LocalOrcaGrid( const OrcaGrid& grid, const SurroundingRectangle& rectangle );
  private:
     const OrcaGrid orca_;
     uint64_t size_;

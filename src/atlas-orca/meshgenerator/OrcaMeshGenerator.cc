@@ -175,15 +175,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     // clone some grid properties
     setGrid( mesh, grid, distribution );
 
-    // unique global index of the orca grid including orca grid halos.
-    idx_t glbarray_offset  = -( nx_orca_halo * iy_glb_min ) - ix_glb_min;
-    idx_t glbarray_jstride = nx_orca_halo;
-    auto orca_global_index = [&]( idx_t i, idx_t j ) {
-        ATLAS_ASSERT( i <= ix_glb_max );
-        ATLAS_ASSERT( j <= iy_glb_max );
-        return glbarray_offset + j * glbarray_jstride + i;
-    };
-
     const bool serial_distribution = (SR_cfg.nparts == 1 || distribution.type() == "serial");
 
     //---------------------------------------------------
@@ -224,7 +215,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     std::vector<idx_t> node_index( local_orca.nx()*local_orca.ny(), -1 );
 
-    std::vector<idx_t> grid_fold_inodes;
     {
         ATLAS_TRACE( "nodes" );
 
@@ -258,31 +248,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         ATLAS_TRACE_SCOPE( "filling" )
         //atlas_omp_parallel_for( idx_t iy = 0; iy < local_orca.ny(); iy++ ) {
         for( idx_t iy = 0; iy < local_orca.ny(); iy++ ) {
-            idx_t iy_glb = local_orca.iy_min() + iy;
-            ATLAS_ASSERT( iy_glb < ny_orca_halo );
-            double lon00 = orca_grid.xy( 0, 0 ).x();
-            double west  = lon00 - 90.;
-
-            auto normalise_lon00 = util::NormaliseLongitude( lon00 - 180. );
-            double lon1          = normalise_lon00( orca_grid.xy( 1, iy_glb ).x() );
-            if ( lon1 < lon00 - 10. ) {
-                west = lon00 - 20.;
-            }
-
-            auto normalise_lon_first_half  = util::NormaliseLongitude{west};
-            auto normalise_lon_second_half = util::NormaliseLongitude{lon00 + 90.};
+            ATLAS_ASSERT( local_orca.iy_min() + iy < ny_orca_halo );
             for ( idx_t ix = 0; ix < local_orca.nx(); ix++ ) {
-                idx_t ix_glb   = local_orca.ix_min() + ix;
-                idx_t ix_glb_master = ix_glb;
-                auto normalise = [&]( double _xy[2] ) {
-                    if ( ix_glb_master < SR_cfg.nx_glb / 2 ) {
-                        _xy[LON] = normalise_lon_first_half( _xy[LON] );
-                    }
-                    else {
-                        _xy[LON] = normalise_lon_second_half( _xy[LON] );
-                    }
-                };
-
                 idx_t ii = local_orca.index( ix, iy );
                 // node properties
                 if ( local_orca.is_node[ii] ) {
@@ -290,89 +257,48 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
                     // ghost nodes
                     nodes.ghost( inode ) = local_orca.is_ghost[ii];
-                    if ( iy_glb > 0 or ix_glb < 0 ) {
-                        nodes.ghost( inode ) = nodes.ghost( inode ) || orca_grid.ghost( ix_glb, iy_glb );
-                    }
-
-                    // flags
-                    auto flags = nodes.flags( inode );
-                    flags.reset();
 
                     // global index
-                    nodes.glb_idx( inode ) = orca_global_index( ix_glb, iy_glb ) + 1;  // no periodic point
+                    nodes.glb_idx( inode ) = local_orca.orca_haloed_global_grid_index( ix, iy ) + 1;
 
                     // grid ij coordinates
-                    nodes.ij( inode, XX ) = ix_glb;
-                    nodes.ij( inode, YY ) = iy_glb;
+                    {
+                      const auto ij_glb = local_orca.global_ij( ix, iy );
+                      nodes.ij( inode, XX ) = ij_glb.i;
+                      nodes.ij( inode, YY ) = ij_glb.j;
+                    }
 
-                    double _xy[2];
-
-                    // grid xy coordinates 
-                    orca_grid.xy( ix_glb, iy_glb, _xy );
-
-                    nodes.xy( inode, LON ) = _xy[LON];
-                    nodes.xy( inode, LAT ) = _xy[LAT];
+                    // grid xy coordinates
+                    {
+                      const auto xy = local_orca.grid_xy( ix, iy );
+                      nodes.xy( inode, LON ) = xy.x();
+                      nodes.xy( inode, LAT ) = xy.y();
+                    }
 
                     // geographic coordinates (normalised)
-                    normalise( _xy );
-                    nodes.lonlat( inode, LON ) = _xy[LON];
-                    nodes.lonlat( inode, LAT ) = _xy[LAT];
+                    {
+                      const auto normalised_xy = local_orca.normalised_grid_xy( ix, iy );
+                      nodes.lonlat( inode, LON ) = normalised_xy.x();
+                      nodes.lonlat( inode, LAT ) = normalised_xy.y();
+                    }
 
                     // part and remote_idx
                     nodes.part( inode )           = local_orca.parts[ii];
                     nodes.remote_idx( inode )     = inode;
-                    gidx_t master_idx             = orca_grid.periodicIndex( ix_glb, iy_glb );
+                    gidx_t master_idx             = local_orca.master_global_index( ix, iy );
                     nodes.master_glb_idx( inode ) = master_idx + 1;
+
+                    // flags
+                    auto flags = nodes.flags( inode );
+
                     if ( nodes.ghost( inode ) ) {
-                        flags.set( Topology::GHOST );
-                        nodes.remote_idx( inode ) = serial_distribution ? static_cast<int>( master_idx ) : -1;
-
-                        if( nodes.glb_idx(inode) != nodes.master_glb_idx(inode) ) {
-                            if ( ix_glb >= SR_cfg.nx_glb - orca_grid.haloWest() ) {
-                                flags.set( Topology::PERIODIC );
-                            }
-                            else if ( ix_glb < orca_grid.haloEast() - 1 ) {
-                                flags.set( Topology::PERIODIC );
-                            }
-                            if ( iy_glb >= SR_cfg.ny_glb - orca_grid.haloNorth() - 1 ) {
-                                flags.set( Topology::PERIODIC );
-                                if ( _xy[LON] > lon00 + 90. ) {
-                                    flags.set( Topology::EAST );
-                                }
-                                else {
-                                    flags.set( Topology::WEST );
-                                }
-                            }
-
-                            if ( flags.check( Topology::PERIODIC ) ) {
-                                // It can still happen that nodes were flagged as periodic wrongly
-                                // e.g. where the grid folds into itself
-
-                                idx_t iy_glb_master = 0;
-                                double xy_master[2];
-                                orca_grid.index2ij( master_idx, ix_glb_master, iy_glb_master );
-                                orca_grid.lonlat(ix_glb_master,iy_glb_master,xy_master);
-                                normalise( xy_master );
-                                if( std::abs(xy_master[LON] - _xy[LON]) < 1.e-12 ) {
-                                    flags.unset(Topology::PERIODIC);
-                                    if (( std::abs(xy_master[LAT] - _xy[LAT]) < 1.e-12 ) &&
-                                        ( iy_glb >= SR_cfg.ny_glb - orca_grid.haloNorth() - 1 ))
-                                        grid_fold_inodes.push_back(inode);
-                                }
-                            }
-                        }
+                      nodes.remote_idx( inode ) = serial_distribution ?
+                          static_cast<int>( master_idx ) : -1;
                     }
 
-                    flags.set( orca_grid.land( ix_glb, iy_glb ) ? Topology::LAND : Topology::WATER );
+                    local_orca.flags( ix, iy, flags );
 
-                    if ( ix_glb <= 0 ) {
-                        flags.set( Topology::BC | Topology::WEST );
-                    }
-                    else if ( ix_glb >= SR_cfg.nx_glb ) {
-                        flags.set( Topology::BC | Topology::EAST );
-                    }
-
-                    nodes.water( inode ) = orca_grid.water( ix_glb, iy_glb );
+                    nodes.water( inode ) = local_orca.water( ix, iy );
                     nodes.halo( inode ) = local_orca.halo[ii];
                 }
             }
