@@ -16,6 +16,7 @@
 #include <unordered_set>
 #include <utility>
 #include <fstream>
+#include <sstream>
 #include <iomanip>
 
 #include "eckit/utils/Hash.h"
@@ -215,6 +216,36 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     std::vector<idx_t> node_index( local_orca.nx()*local_orca.ny(), -1 );
 
+    std::stringstream file_spec;
+    file_spec << orca.type() << "_" << distribution.type() << nparts << "_" << mypart_;
+
+    std::ofstream summary_file, partition_file, ghost_file, is_node_file, xy_file, lonlat_file, cells_file;
+    summary_file.open(file_spec.str() + "_summary.txt");
+    partition_file.open(file_spec.str() + "_partition.txt");
+    ghost_file.open(file_spec.str() + "_ghost.txt");
+    is_node_file.open(file_spec.str() + "_is_node.txt");
+    xy_file.open(file_spec.str() + "_xy.txt");
+    lonlat_file.open(file_spec.str() + "_lonlat.txt");
+    cells_file.open(file_spec.str() + "_cells.txt");
+
+    summary_file << "SR.nx " << SR.nx()
+                 << "\nSR.ny " << SR.ny()
+                 << "\nSR.ix_min " << SR.ix_min()
+                 << "\nSR.ix_max " << SR.ix_max()
+                 << "\nSR.iy_min " << SR.iy_min()
+                 << "\nSR.iy_max " << SR.iy_max()
+                 << "\nSR.nb_nodes_owned " << SR.nb_real_nodes_owned_by_rectangle
+                 << "\nlocal_orca.nx " << local_orca.nx()
+                 << "\nlocal_orca.ny " << local_orca.ny()
+                 << "\nlocal_orca.ix_min " << local_orca.ix_min()
+                 << "\nlocal_orca.ix_max " << local_orca.ix_max()
+                 << "\nlocal_orca.iy_min " << local_orca.iy_min()
+                 << "\nlocal_orca.iy_max " << local_orca.iy_max()
+                 << "\nlocal_orca.nb_real_nodes " << local_orca.nb_real_nodes()
+                 << "\nlocal_orca.nb_ghost_nodes " << local_orca.nb_ghost_nodes()
+                 << "\nlocal_orca.nb_used_nodes " << local_orca.nb_used_nodes()
+                 << std::endl;
+
     {
         ATLAS_TRACE( "nodes" );
 
@@ -296,7 +327,13 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
                     nodes.water( inode ) = local_orca.water( ix, iy );
                     nodes.halo( inode ) = local_orca.halo[ii];
+                    // print diagnostic properties of nodes
+                    partition_file << inode << ", " << nodes.part( inode ) << std::endl;
+                    ghost_file << inode << ", " << nodes.ghost( inode ) << std::endl;
+                    xy_file << inode << ", " << nodes.xy( inode, 0 ) << ", " << nodes.xy( inode, 1 ) << std::endl;
+                    lonlat_file << inode << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 ) << std::endl;
                 }
+                is_node_file << local_orca.is_node[ii] << std::endl;
             }
         }
     }
@@ -391,6 +428,10 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     if ( orca_grid.invalidElement( local_orca.ix_min() + ix, local_orca.iy_min() + iy ) ) {
                         cells.flags( jcell ).set( Topology::INVALID );
                     }
+                    cells_file << jcell << ", " << quad_nodes[0]
+                                        << ", " << quad_nodes[1]
+                                        << ", " << quad_nodes[2]
+                                        << ", " << quad_nodes[3] << std::endl;
                 }
             }
         }
@@ -414,6 +455,14 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     mesh.metadata().set("halo", halosize_);
     mesh.nodes().metadata().set<size_t>( "NbRealPts", local_orca.nb_real_nodes() );
     mesh.nodes().metadata().set<size_t>( "NbVirtualPts", local_orca.nb_ghost_nodes() );
+
+    summary_file.close();
+    partition_file.close();
+    ghost_file.close();
+    is_node_file.close();
+    xy_file.close();
+    lonlat_file.close();
+    cells_file.close();
 }
 
 using Unique2Node = std::map<gidx_t, idx_t>;
