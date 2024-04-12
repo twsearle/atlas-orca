@@ -45,8 +45,13 @@ class LocalOrcaGrid {
     int iy_max() const {return iy_orca_max_;}
     uint64_t nx() const {return nx_orca_;}
     uint64_t ny() const {return ny_orca_;}
+    // number of real nodes on this partition
     uint64_t nb_real_nodes() const {return nb_real_nodes_;}
+    // number of ghost nodes on this partition
     uint64_t nb_ghost_nodes() const {return nb_ghost_nodes_;}
+    // number of nodes used by cells on this partition
+    uint64_t nb_used_nodes() const {return nb_used_nodes_;}
+    // number of cells on this partition
     uint64_t nb_cells() const {return nb_cells_;}
 
     int index( idx_t ix, idx_t iy ) const;
@@ -70,6 +75,7 @@ class LocalOrcaGrid {
     int iy_orca_max_;
     uint64_t nx_orca_;
     uint64_t ny_orca_;
+    uint64_t nb_used_nodes_;
     uint64_t nb_real_nodes_;
     uint64_t nb_ghost_nodes_;
     uint64_t nb_cells_;

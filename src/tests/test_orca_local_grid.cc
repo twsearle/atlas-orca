@@ -145,15 +145,19 @@ CASE("test surrounding local_orca ") {
       if (cfg.nparts == 2) {
         if (cfg.mypart == 0) {
           EXPECT(local_orca.iy_min() == -1);
-          EXPECT(local_orca.iy_max() == 146 + halo);
+          EXPECT(local_orca.iy_max() == 147 + halo);
           EXPECT(local_orca.ix_min() == -1 - halo);
           EXPECT(local_orca.ix_max() == 89 + halo);
+          EXPECT(local_orca.nx() == (89+1) + 1 + 2*halo);
+          EXPECT(local_orca.ny() == 149 + 3*halo);
         }
         if (cfg.mypart == 1) {
           EXPECT(local_orca.iy_min() == -1);
-          EXPECT(local_orca.iy_max() == 146 + halo);
+          EXPECT(local_orca.iy_max() == 147 + halo);
           EXPECT(local_orca.ix_min() == 90 - halo);
-          EXPECT(local_orca.ix_max() == 179 + halo);
+          EXPECT(local_orca.ix_max() == 180 + halo);
+          EXPECT(local_orca.nx() == (180-90) + 1 + 2*halo);
+          EXPECT(local_orca.ny() == 149 + 3*halo);
         }
       }
     }

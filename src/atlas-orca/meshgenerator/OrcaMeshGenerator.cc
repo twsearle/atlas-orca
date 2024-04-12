@@ -180,15 +180,15 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     //---------------------------------------------------
 
     if ( serial_distribution ) {
-        ATLAS_ASSERT_MSG(orca_grid.nx() * orca_grid.ny() == local_orca.nb_real_nodes(),
-          std::string("Size of the surrounding rectangle coord system does not match up with the size of the internal space in the orca_grid: ")
-          + std::to_string(orca_grid.nx() * orca_grid.nx()) + " != " + std::to_string(local_orca.nb_real_nodes()) );
         ATLAS_ASSERT_MSG(nx_orca_halo == local_orca.nx(),
           std::string("Size of the surrounding rectangle x-space doesn't match up with orca-grid x-space: ")
           + std::to_string(nx_orca_halo) + " != " + std::to_string(local_orca.nx()) );
         ATLAS_ASSERT_MSG(ny_orca_halo == local_orca.ny(),
           std::string("Size of the surrounding rectangle y-space doesn't match up with orca-grid y-space: ")
           + std::to_string(ny_orca_halo) + " != " + std::to_string(local_orca.ny()) );
+        ATLAS_ASSERT_MSG(local_orca.nx() * local_orca.ny() == local_orca.nb_real_nodes(),
+          std::string("Number of nodes in mesh does not equal the total size of the surrounding rectangle")
+          + std::to_string(local_orca.nx() * local_orca.ny()) + " != " + std::to_string(local_orca.nb_real_nodes()) );
     }
 
     // define nodes and associated properties
@@ -224,22 +224,18 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
         ATLAS_TRACE_SCOPE( "indexing" )
         for ( idx_t iy = 0; iy < local_orca.ny(); iy++ ) {
-            idx_t iy_glb = local_orca.iy_min() + iy;
-            ATLAS_ASSERT( iy_glb < ny_orca_halo );
             for ( idx_t ix = 0; ix < local_orca.nx(); ix++ ) {
                 idx_t ii = local_orca.index( ix, iy );
                 // node properties
                 if ( local_orca.is_node[ii] ) {
                     // set node counter
-                    if ( local_orca.is_ghost[ii] != 0 ) {
+                    if ( local_orca.is_ghost[ii] ) {
                         node_index[ii] = inode_ghost++;
-                        ATLAS_ASSERT_MSG( node_index[ii] < local_orca.nb_real_nodes(),
-                            std::string("node_index[") + std::to_string(ii) + std::string("] ") + std::to_string(node_index[ii]) + " >= " + std::to_string(local_orca.nb_real_nodes()));
-                    }
-                    else {
+                    } else {
                         node_index[ii] = inode_nonghost++;
-                        ATLAS_ASSERT( node_index[ii] < local_orca.nb_real_nodes() );
                     }
+                    ATLAS_ASSERT_MSG( node_index[ii] < local_orca.nb_used_nodes(),
+                        std::string("node_index[") + std::to_string(ii) + std::string("] ") + std::to_string(node_index[ii]) + " >= " + std::to_string(local_orca.nb_used_nodes()));
                 }
             }
         }
