@@ -80,9 +80,16 @@ CASE("test surrounding rectangle ") {
       cfg.ny_glb = grid.ny();
       std::cout << "[" << cfg.mypart << "] " << regular_grid.type() << std::endl;
 
-      EXPECT(regular_grid.ny() == grid.ny());
+      const idx_t cell_width = 1;
+      if (regular_grid.ny() + 2*halo != grid.ny()) {
+        std::cout << regular_grid.ny() + 2*halo << " != " << grid.ny() << std::endl;
+      }
+      EXPECT(regular_grid.ny() + 2*halo == grid.ny());
       for (idx_t ix = 0; ix < grid.ny(); ++ix) {
-        EXPECT(regular_grid.nx(ix) == grid.nx());
+        if (regular_grid.nx(ix) + 2*halo != grid.nx()) {
+          std::cout << regular_grid.nx(ix) + 2*halo << " != " << grid.nx() << std::endl;
+        }
+        EXPECT(regular_grid.nx(ix) + 2*halo == grid.nx());
       }
       std::cout << " last index? " << regular_grid.index(grid.nx()-1, grid.ny()-1) << std::endl;
 
@@ -112,10 +119,10 @@ CASE("test surrounding rectangle ") {
       std::vector<bool> this_partition;
       for (uint64_t j = 0; j < rectangle.ny(); j++) {
         int iy_glb = rectangle.iy_min() + j;
-        EXPECT(iy_glb < grid.ny());
+        EXPECT(iy_glb < grid.ny() + cell_width + 2*halo);
         for (uint64_t i = 0; i < rectangle.nx(); i++) {
           int ix_glb = rectangle.ix_min() + i;
-          EXPECT(ix_glb < grid.nx());
+          EXPECT(ix_glb < grid.nx() + cell_width + 2*halo);
           auto ii = rectangle.index(i, j);
           indices.emplace_back(ii);
 
@@ -141,9 +148,9 @@ CASE("test surrounding rectangle ") {
           // If it is not a ghost node, it must be a node, however some ghost
           // nodes are also nodes.
           // TODO: Understand what is going on with this!
-          if (!rectangle.is_ghost.at(ii)) {
-              std::cout << "[" << cfg.mypart << "] i " << i << " j " << j << " ii " << ii << std::endl;
-          }
+          //if (!rectangle.is_ghost.at(ii)) {
+          //    std::cout << "[" << cfg.mypart << "] i " << i << " j " << j << " ii " << ii << std::endl;
+          //}
         }
       }
       haloFile.close();
@@ -183,44 +190,46 @@ CASE("test surrounding rectangle ") {
         gmsh.write(regular_mesh);
       }
 
+      std::cout << "(iy_min, iy_max) (" << rectangle.iy_min() << ", " << rectangle.iy_max() << ") "
+                << "(ix_min, ix_max) (" << rectangle.ix_min() << ", " << rectangle.ix_max() << ") " << std::endl;
       if (cfg.nparts == 2) {
         if (cfg.mypart == 0) {
           EXPECT(rectangle.iy_min() == 0);
-          EXPECT(rectangle.iy_max() == 146 + halo);
+          EXPECT(rectangle.iy_max() == grid.ny() + halo);
           EXPECT(rectangle.ix_min() == 0 - halo);
-          EXPECT(rectangle.ix_max() == 89 + halo);
+          EXPECT(rectangle.ix_max() == 89 + cell_width + halo);
         }
         if (cfg.mypart == 1) {
           EXPECT(rectangle.iy_min() == 0);
-          EXPECT(rectangle.iy_max() == 146 + halo);
+          EXPECT(rectangle.iy_max() == grid.ny() + halo);
           EXPECT(rectangle.ix_min() == 90 - halo);
-          EXPECT(rectangle.ix_max() == 179 + halo);
+          EXPECT(rectangle.ix_max() == grid.nx() + halo);
         }
       }
       if (cfg.nparts == 4) {
         if (cfg.mypart == 0) {
           EXPECT(rectangle.iy_min() == 0);
-          EXPECT(rectangle.iy_max() == 73 + halo);
+          EXPECT(rectangle.iy_max() == 73 + cell_width + halo);
           EXPECT(rectangle.ix_min() == 0 - halo);
-          EXPECT(rectangle.ix_max() == 89 + halo);
+          EXPECT(rectangle.ix_max() == 89 + cell_width + halo);
         }
         if (cfg.mypart == 1) {
           EXPECT(rectangle.iy_min() == 0);
-          EXPECT(rectangle.iy_max() == 73 + halo);
+          EXPECT(rectangle.iy_max() == 73 + cell_width + halo);
           EXPECT(rectangle.ix_min() == 89 - halo);
-          EXPECT(rectangle.ix_max() == 179 + halo);
+          EXPECT(rectangle.ix_max() == 179 + cell_width + halo);
         }
         if (cfg.mypart == 2) {
           EXPECT(rectangle.iy_min() == 73 - halo);
-          EXPECT(rectangle.iy_max() == 146 + halo);
+          EXPECT(rectangle.iy_max() == 146 + cell_width + halo);
           EXPECT(rectangle.ix_min() == 0 - halo);
-          EXPECT(rectangle.ix_max() == 90 + halo);
+          EXPECT(rectangle.ix_max() == 90 + cell_width + halo);
         }
         if (cfg.mypart == 3) {
           EXPECT(rectangle.iy_min() == 73 - halo);
-          EXPECT(rectangle.iy_max() == 146 + halo);
+          EXPECT(rectangle.iy_max() == 146 + cell_width + halo);
           EXPECT(rectangle.ix_min() == 90 - halo);
-          EXPECT(rectangle.ix_max() == 179 + halo);
+          EXPECT(rectangle.ix_max() == 179 + cell_width + halo);
         }
       }
     }

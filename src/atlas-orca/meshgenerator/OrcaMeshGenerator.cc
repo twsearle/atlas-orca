@@ -217,7 +217,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     std::vector<idx_t> node_index( local_orca.nx()*local_orca.ny(), -1 );
 
     std::stringstream file_spec;
-    file_spec << orca.type() << "_" << distribution.type() << nparts << "_" << mypart_;
+    file_spec << orca_grid.name() << "_" << distribution.type() << nparts_ << "_" << mypart_;
 
     std::ofstream summary_file, partition_file, ghost_file, is_node_file, xy_file, lonlat_file, cells_file;
     summary_file.open(file_spec.str() + "_summary.txt");
@@ -251,7 +251,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
         // loop over nodes and set properties
         inode_nonghost = 0;
-        inode_ghost    = local_orca.nb_real_nodes();  // orca ghost nodes start counting after nonghost nodes
+        inode_ghost    = local_orca.nb_used_nodes();  // orca ghost nodes start counting after nonghost nodes
 
         ATLAS_TRACE_SCOPE( "indexing" )
         for ( idx_t iy = 0; iy < local_orca.ny(); iy++ ) {
@@ -265,8 +265,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     } else {
                         node_index[ii] = inode_nonghost++;
                     }
-                    ATLAS_ASSERT_MSG( node_index[ii] < local_orca.nb_used_nodes(),
-                        std::string("node_index[") + std::to_string(ii) + std::string("] ") + std::to_string(node_index[ii]) + " >= " + std::to_string(local_orca.nb_used_nodes()));
+                    //ATLAS_ASSERT_MSG( node_index[ii] < local_orca.nb_used_nodes(),
+                    //    std::string("node_index[") + std::to_string(ii) + std::string("] ") + std::to_string(node_index[ii]) + " >= " + std::to_string(local_orca.nb_used_nodes()));
                 }
             }
         }

@@ -52,6 +52,8 @@ int SurroundingRectangle::index( int i, int j ) const {
 }
 
 int SurroundingRectangle::partition( idx_t ix, idx_t iy ) const {
+  ix = wrap(ix, 0, cfg_.nx_glb);
+  iy = wrap(iy, 0, cfg_.ny_glb);
   ATLAS_ASSERT_MSG(ix < cfg_.nx_glb, std::string("ix >= cfg_.nx_glb: ") + std::to_string(ix) + " >= " + std::to_string(cfg_.nx_glb));
   ATLAS_ASSERT_MSG(iy < cfg_.ny_glb, std::string("iy >= cfg_.ny_glb: ") + std::to_string(iy) + " >= " + std::to_string(cfg_.ny_glb));
   return distribution_.partition( iy * cfg_.nx_glb + ix );
@@ -143,9 +145,13 @@ SurroundingRectangle::SurroundingRectangle(
     }
   }
 
-  // dimensions of the surrounding rectangle
-  nx_ = ix_max_ - ix_min_;
-  ny_ = iy_max_ - iy_min_;
+  // +1 to surround the ghost nodes used to complete the cells
+  ix_max_ += 1;
+  iy_max_ += 1;
+
+  // dimensions of the surrounding rectangle (+1 buecause the size of the dimension is one bigger than the index of the last element)
+  nx_ = ix_max_ - ix_min_ + 1;
+  ny_ = iy_max_ - iy_min_ + 1;
 
   logFile << "[" << cfg_.mypart << "] ix_min: "     << ix_min_ << std::endl;
   logFile << "[" << cfg_.mypart << "] ix_max: "     << ix_max_ << std::endl;
