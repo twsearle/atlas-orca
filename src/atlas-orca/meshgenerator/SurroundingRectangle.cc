@@ -42,42 +42,50 @@ int wrap( idx_t value, idx_t lower, idx_t upper ) {
   }
   return value;
 }
-int periodic_index( idx_t ix, idx_t iy, idx_t upper_x, idx_t upper_y ) {
-  // wrap around coordinate system when out of bounds on the rectangle
-  const idx_t width_x = upper_x;
-  const idx_t width_y = upper_y;
-
-  // j index north/south boundaries
-  if (jy >= upper_y) {
-    iy = 2*upper_y - iy;
-    ix = upper_x - ix;
-  }
-  if (jy < 0) {
-    iy = -iy;
-    ix = upper_x - ix;
-  }
-
-  // i index periodic east/west boundaries
-  if (ix < 0) {
-    ix = wrap(ix + width_x, 0, upper_x);
-  }
-  if (ix >= upper_x) {
-    ix = wrap(ix - width_x, 0, upper_x);
-  }
-  return std::make_pair(ix, iy);
-}
 }  // namespace
 
 
-int SurroundingRectangle::index( int ix, int iy ) const {
-  auto [ix, iy] = periodic_index( idx_t ix, idx_t iy, idx_t nx_, idx_t ny_ );
+std::pair<int, int> SurroundingRectangle::periodic_ij( idx_t ix, idx_t iy) const {
+  // wrap around coordinate system when out of bounds on the global rectangle
+
+  // convert to global ij on rectangle
+  idx_t ix_glb = ix_min_ + ix;
+  idx_t iy_glb = iy_min_ + iy;
+  const idx_t width_x = cfg_.nx_glb;
+  const idx_t ix_glb_max = cfg_.nx_glb - 1;
+  const idx_t iy_glb_max = cfg_.ny_glb - 1;
+
+  // j index north/south boundaries
+  if (iy_glb >= iy_glb_max) {
+    iy_glb = 2*iy_glb_max - iy_glb;
+    ix_glb = ix_glb_max - ix_glb;
+  }
+  if (iy_glb < 0) {
+    iy_glb = -iy_glb;
+    ix_glb = ix_glb_max - ix_glb;
+  }
+
+  // i index periodic east/west boundaries
+  if (ix_glb < 0) {
+    ix_glb = wrap(ix_glb + width_x, 0, cfg_.nx_glb);
+  }
+  if (ix_glb >= cfg_.nx_glb) {
+    ix_glb = wrap(ix_glb - width_x, 0, cfg_.nx_glb);
+  }
+
+  // convert to local ij on rectangle
+  return std::make_pair(ix_glb - ix_min_, iy_glb - iy_min_);
+}
+
+int SurroundingRectangle::index( int i, int j ) const {
+  auto [ix, iy] = this->periodic_ij(i, j);
   ATLAS_ASSERT_MSG(ix < nx_, std::string("ix >= nx_: ") + std::to_string(ix) + " >= " + std::to_string(nx_));
   ATLAS_ASSERT_MSG(iy < ny_, std::string("iy >= ny_: ") + std::to_string(iy) + " >= " + std::to_string(ny_));
   return iy * nx_ + ix;
 }
 
-int SurroundingRectangle::partition( idx_t ix, idx_t iy ) const {
-  auto [ix, iy] = periodic_index( idx_t ix, idx_t iy, idx_t nx_, idx_t ny_ );
+int SurroundingRectangle::partition( idx_t i, idx_t j ) const {
+  auto [ix, iy] = this->periodic_ij(i, j);
   ATLAS_ASSERT_MSG(ix < cfg_.nx_glb, std::string("ix >= cfg_.nx_glb: ") + std::to_string(ix) + " >= " + std::to_string(cfg_.nx_glb));
   ATLAS_ASSERT_MSG(iy < cfg_.ny_glb, std::string("iy >= cfg_.ny_glb: ") + std::to_string(iy) + " >= " + std::to_string(cfg_.ny_glb));
   return distribution_.partition( iy * cfg_.nx_glb + ix );

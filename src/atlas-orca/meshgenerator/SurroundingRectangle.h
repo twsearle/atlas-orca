@@ -65,6 +65,7 @@ class SurroundingRectangle {
         }
     };
     SurroundingRectangle(const grid::Distribution& distribution, const Configuration& cfg);
+    std::pair<int, int> periodic_ij( idx_t ix, idx_t iy ) const;
     int index( int i, int j ) const;
     int partition( idx_t i, idx_t j ) const;
     std::vector<int> parts;
