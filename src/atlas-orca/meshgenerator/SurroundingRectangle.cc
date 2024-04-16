@@ -57,12 +57,12 @@ std::pair<int, int> SurroundingRectangle::periodic_ij( idx_t ix, idx_t iy) const
 
   // j index north/south boundaries
   if (iy_glb >= iy_glb_max) {
-    iy_glb = 2*iy_glb_max - iy_glb;
     ix_glb = ix_glb_max - ix_glb;
+    iy_glb = 2*iy_glb_max - iy_glb;
   }
   if (iy_glb < 0) {
-    iy_glb = -iy_glb;
     ix_glb = ix_glb_max - ix_glb;
+    iy_glb = -iy_glb;
   }
 
   // i index periodic east/west boundaries
@@ -121,10 +121,7 @@ SurroundingRectangle::SurroundingRectangle(
       int nb_real_nodes_owned_by_rectangle_TP = 0;
       atlas_omp_for( idx_t iy = 0; iy < cfg_.ny_glb; iy++ ) {
         for ( idx_t ix = 0; ix < cfg_.nx_glb; ix++ ) {
-          // wrap around coordinate system when out of bounds on the rectangle
-          int ix_wrapped = wrap(ix, 0, cfg_.nx_glb);
-          int iy_wrapped = wrap(iy, 0, cfg_.ny_glb);
-          int p = partition( ix_wrapped, iy_wrapped );
+          int p = partition( ix, iy );
           if ( p == cfg_.mypart ) {
             ix_min_TP = std::min<idx_t>( ix_min_TP, ix );
             ix_max_TP = std::max<idx_t>( ix_max_TP, ix );
@@ -138,10 +135,7 @@ SurroundingRectangle::SurroundingRectangle(
                 for (idx_t dhy = -cfg_.halosize; dhy < cfg_.halosize + 1; ++dhy) {
                   if ((dhy == 0 && dhx == 0))
                     continue;
-                  // wrap around coordinate system when out of bounds on the rectangle
-                  int hx = wrap(ix + dhx, 0, cfg_.nx_glb);
-                  int hy = wrap(iy + dhy, 0, cfg_.ny_glb);
-                  int p_halo = partition( hx, hy );
+                  int p_halo = partition( ix + dhx, iy + dhy );
 
                   if ( p_halo == cfg_.mypart ) {
                     //nb_real_nodes_owned_by_rectangle_TP++;
@@ -207,7 +201,7 @@ SurroundingRectangle::SurroundingRectangle(
       for ( idx_t ix = 0; ix < nx_; ix++ ) {
         idx_t ii         = index( ix, iy );
         idx_t ix_reg_glb = ix_min_ + ix;  // global x-index in reg-grid-space
-        parts.at( ii ) = partition( ix_reg_glb, iy_reg_glb );
+        parts.at( ii ) = partition( ix, iy );
         bool halo_found = false;
         int halo_dist = cfg_.halosize;
         if ((cfg_.halosize > 0) && parts.at( ii ) != cfg_.mypart ) {
@@ -216,10 +210,7 @@ SurroundingRectangle::SurroundingRectangle(
           for (idx_t dhy = -cfg_.halosize; dhy <= cfg_.halosize; ++dhy) {
             for (idx_t dhx = -cfg_.halosize; dhx <= cfg_.halosize; ++dhx) {
               if (dhx == 0 && dhy == 0) continue;
-              // wrap around coordinate system when out of bounds on the rectangle
-              const int hx = wrap(ix_reg_glb + dhx, 0, cfg_.nx_glb);
-              const int hy = wrap(iy_reg_glb + dhy, 0, cfg_.ny_glb);
-              if (partition(hx, hy) == cfg_.mypart) {
+              if (partition(ix + dhx, iy + dhy) == cfg_.mypart) {
                 // find the minimum distance from this halo node to
                 // a node on the partition
                 auto dist = std::max(std::abs(dhx), std::abs(dhy));
