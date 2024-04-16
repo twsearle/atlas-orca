@@ -235,7 +235,8 @@ idx_t LocalOrcaGrid::orca_haloed_global_grid_index( idx_t ix, idx_t iy ) const {
   auto ij = this->global_ij( ix, iy );
 
   // wrap points outside of orca_grid halo back into the orca grid.
-  if( (ij.i > ix_glb_min + nx_orca_) || (ij.j > iy_glb_min + ny_orca_) ) {
+  if ( (ij.i >= ix_glb_min + nx_orca_) || (ij.j >= iy_glb_min + ny_orca_)
+    || (ij.i < ix_glb_min) || (ij.j < iy_glb_min) ) {
     gidx_t p_idx = orca_.periodicIndex(ij.i, ij.j);
     idx_t i, j;
     orca_.index2ij(p_idx, i, j);
@@ -243,10 +244,10 @@ idx_t LocalOrcaGrid::orca_haloed_global_grid_index( idx_t ix, idx_t iy ) const {
     ij.j = j;
   }
 
-  ATLAS_ASSERT_MSG( ij.i <= ix_glb_min + nx_orca_,
-                    std::to_string(ij.i) + std::string(" > ") + std::to_string(ix_glb_min + nx_orca_) );
-  ATLAS_ASSERT_MSG( ij.j <= iy_glb_min + ny_orca_,
-                    std::to_string(ij.j) + std::string(" > ") + std::to_string(iy_glb_min + ny_orca_) );
+  ATLAS_ASSERT_MSG( ij.i < ix_glb_min + nx_orca_,
+                    std::to_string(ij.i) + std::string(" >= ") + std::to_string(ix_glb_min + nx_orca_) );
+  ATLAS_ASSERT_MSG( ij.j < iy_glb_min + ny_orca_,
+                    std::to_string(ij.j) + std::string(" >= ") + std::to_string(iy_glb_min + ny_orca_) );
   return glbarray_offset + ij.j * glbarray_jstride + ij.i;
 }
 
