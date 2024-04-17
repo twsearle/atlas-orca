@@ -139,7 +139,7 @@ SurroundingRectangle::SurroundingRectangle(
 
                   if ( p_halo == cfg_.mypart ) {
                     //nb_real_nodes_owned_by_rectangle_TP++;
-                    if (ix_max_TP < ix) logFile << "[" << cfg_.mypart << "] ix_max bumped by halo: hx " << hx  << " ix " << ix << " ix_max_TP " << ix_max_TP << std::endl;
+                    if (ix_max_TP < ix) logFile << "[" << cfg_.mypart << "] ix_max bumped by halo: hx " << ix + dhx << " ix " << ix << " ix_max_TP " << ix_max_TP << std::endl;
                     iy_min_TP = std::min<idx_t>( iy_min_TP, iy );
                     iy_max_TP = std::max<idx_t>( iy_max_TP, iy );
                     // NOTE. We need to update the max if we have wrapped
