@@ -45,12 +45,10 @@ int wrap( idx_t value, idx_t lower, idx_t upper ) {
 }  // namespace
 
 
-std::pair<int, int> SurroundingRectangle::periodic_ij( idx_t ix, idx_t iy) const {
+std::pair<int, int> SurroundingRectangle::global_periodic_ij( idx_t ix_glb, idx_t iy_glb) const {
   // wrap around coordinate system when out of bounds on the global rectangle
 
-  // convert to global ij on rectangle
-  idx_t ix_glb = ix_min_ + ix;
-  idx_t iy_glb = iy_min_ + iy;
+  // use global ij on rectangle
   const idx_t width_x = cfg_.nx_glb;
   const idx_t ix_glb_max = cfg_.nx_glb - 1;
   const idx_t iy_glb_max = cfg_.ny_glb - 1;
@@ -69,26 +67,32 @@ std::pair<int, int> SurroundingRectangle::periodic_ij( idx_t ix, idx_t iy) const
   if (ix_glb < 0) {
     ix_glb = wrap(ix_glb + width_x, 0, cfg_.nx_glb);
   }
-  if (ix_glb >= cfg_.nx_glb) {
+  if (ix_glb > ix_glb_max) {
     ix_glb = wrap(ix_glb - width_x, 0, cfg_.nx_glb);
   }
 
   // convert to local ij on rectangle
-  return std::make_pair(ix_glb - ix_min_, iy_glb - iy_min_);
+  return std::make_pair(ix_glb, iy_glb);
 }
 
-int SurroundingRectangle::index( int i, int j ) const {
-  auto [ix, iy] = this->periodic_ij(i, j);
+int SurroundingRectangle::index( int ix, int iy ) const {
   ATLAS_ASSERT_MSG(ix < nx_, std::string("ix >= nx_: ") + std::to_string(ix) + " >= " + std::to_string(nx_));
   ATLAS_ASSERT_MSG(iy < ny_, std::string("iy >= ny_: ") + std::to_string(iy) + " >= " + std::to_string(ny_));
   return iy * nx_ + ix;
 }
 
 int SurroundingRectangle::partition( idx_t i, idx_t j ) const {
-  auto [ix, iy] = this->periodic_ij(i, j);
-  ATLAS_ASSERT_MSG(ix < cfg_.nx_glb, std::string("ix >= cfg_.nx_glb: ") + std::to_string(ix) + " >= " + std::to_string(cfg_.nx_glb));
-  ATLAS_ASSERT_MSG(iy < cfg_.ny_glb, std::string("iy >= cfg_.ny_glb: ") + std::to_string(iy) + " >= " + std::to_string(cfg_.ny_glb));
-  return distribution_.partition( iy * cfg_.nx_glb + ix );
+  auto [ix_glb, iy_glb] = this->global_periodic_ij(ix_min_ + i, iy_min_ + j);
+  ATLAS_ASSERT_MSG(ix_glb < cfg_.nx_glb, std::string("ix >= cfg_.nx_glb: ") + std::to_string(ix_glb) + " >= " + std::to_string(cfg_.nx_glb));
+  ATLAS_ASSERT_MSG(iy_glb < cfg_.ny_glb, std::string("iy >= cfg_.ny_glb: ") + std::to_string(iy_glb) + " >= " + std::to_string(cfg_.ny_glb));
+  return distribution_.partition( iy_glb * cfg_.nx_glb + ix_glb );
+}
+
+int SurroundingRectangle::global_partition( idx_t ix_glb, idx_t iy_glb ) const {
+  auto [ix_glb_p, iy_glb_p] = this->global_periodic_ij(ix_glb, iy_glb);
+  ATLAS_ASSERT_MSG(ix_glb_p < cfg_.nx_glb, std::string("ix >= cfg_.nx_glb: ") + std::to_string(ix_glb_p) + " >= " + std::to_string(cfg_.nx_glb));
+  ATLAS_ASSERT_MSG(iy_glb_p < cfg_.ny_glb, std::string("iy >= cfg_.ny_glb: ") + std::to_string(iy_glb_p) + " >= " + std::to_string(cfg_.ny_glb));
+  return distribution_.partition( iy_glb_p * cfg_.nx_glb + ix_glb_p );
 }
 
 SurroundingRectangle::SurroundingRectangle(
@@ -121,7 +125,7 @@ SurroundingRectangle::SurroundingRectangle(
       int nb_real_nodes_owned_by_rectangle_TP = 0;
       atlas_omp_for( idx_t iy = 0; iy < cfg_.ny_glb; iy++ ) {
         for ( idx_t ix = 0; ix < cfg_.nx_glb; ix++ ) {
-          int p = partition( ix, iy );
+          int p = global_partition( ix, iy );
           if ( p == cfg_.mypart ) {
             ix_min_TP = std::min<idx_t>( ix_min_TP, ix );
             ix_max_TP = std::max<idx_t>( ix_max_TP, ix );
@@ -135,7 +139,7 @@ SurroundingRectangle::SurroundingRectangle(
                 for (idx_t dhy = -cfg_.halosize; dhy < cfg_.halosize + 1; ++dhy) {
                   if ((dhy == 0 && dhx == 0))
                     continue;
-                  int p_halo = partition( ix + dhx, iy + dhy );
+                  int p_halo = global_partition( ix + dhx, iy + dhy );
 
                   if ( p_halo == cfg_.mypart ) {
                     //nb_real_nodes_owned_by_rectangle_TP++;

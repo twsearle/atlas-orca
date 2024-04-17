@@ -65,7 +65,7 @@ class SurroundingRectangle {
         }
     };
     SurroundingRectangle(const grid::Distribution& distribution, const Configuration& cfg);
-    std::pair<int, int> periodic_ij( idx_t ix, idx_t iy ) const;
+    std::pair<int, int> global_periodic_ij( idx_t ix, idx_t iy ) const;
     int index( int i, int j ) const;
     int partition( idx_t i, idx_t j ) const;
     std::vector<int> parts;
@@ -80,6 +80,7 @@ class SurroundingRectangle {
     uint64_t nb_real_nodes_owned_by_rectangle;
 
  private:
+    int global_partition( idx_t ix_glb, idx_t iy_glb ) const;
     const grid::Distribution distribution_;
     const OrcaGrid orca_;
     const Configuration cfg_;
