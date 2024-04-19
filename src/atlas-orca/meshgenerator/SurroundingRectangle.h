@@ -16,6 +16,7 @@
 #include "atlas/util/Config.h"
 #include "atlas/grid/Distribution.h"
 #include "atlas-orca/grid/OrcaGrid.h"
+#include "atlas-orca/util/PointIJ.h"
 
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -65,7 +66,7 @@ class SurroundingRectangle {
         }
     };
     SurroundingRectangle(const grid::Distribution& distribution, const Configuration& cfg);
-    std::pair<int, int> global_periodic_ij( idx_t ix, idx_t iy ) const;
+    PointIJ global_periodic_ij( idx_t ix, idx_t iy ) const;
     int index( int i, int j ) const;
     int partition( idx_t i, idx_t j ) const;
     std::vector<int> parts;

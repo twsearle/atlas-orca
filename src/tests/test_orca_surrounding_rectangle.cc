@@ -125,6 +125,9 @@ CASE("test surrounding rectangle ") {
           EXPECT(ix_glb < grid.nx() + cell_width + 2*halo);
           auto ii = rectangle.index(i, j);
           indices.emplace_back(ii);
+          atlas::orca::PointIJ ij = rectangle.global_periodic_ij(ix_glb, iy_glb);
+          ATLAS_ASSERT(ij.i < cfg.nx_glb);
+          ATLAS_ASSERT(ij.j < cfg.ny_glb);
 
           haloFile  << i << ", " << j << ", " << rectangle.halo.at(ii) << std::endl;
           ghostFile << i << ", " << j << ", " << rectangle.is_ghost.at(ii) << std::endl;
