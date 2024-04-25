@@ -46,9 +46,9 @@ class LocalOrcaGrid {
     uint64_t nx() const {return nx_orca_;}
     uint64_t ny() const {return ny_orca_;}
     // number of real nodes on this partition
-    uint64_t nb_real_nodes() const {return nb_real_nodes_;}
+    uint64_t nb_used_real_nodes() const {return nb_used_real_nodes_;}
     // number of ghost nodes on this partition
-    uint64_t nb_ghost_nodes() const {return nb_ghost_nodes_;}
+    uint64_t nb_used_ghost_nodes() const {return nb_used_ghost_nodes_;}
     // number of nodes used by cells on this partition
     uint64_t nb_used_nodes() const {return nb_used_nodes_;}
     // number of cells on this partition
@@ -57,11 +57,12 @@ class LocalOrcaGrid {
     int index( idx_t ix, idx_t iy ) const;
     LocalOrcaGrid( const OrcaGrid& grid, const SurroundingRectangle& rectangle );
     PointIJ global_ij( idx_t ix, idx_t iy ) const;
-    const PointXY& grid_xy( idx_t ix, idx_t iy ) const;
+    const PointXY grid_xy( idx_t ix, idx_t iy ) const;
     PointXY normalised_grid_xy( idx_t ix, idx_t iy ) const;
     PointIJ master_global_ij( idx_t ix, idx_t iy ) const;
     gidx_t master_global_index( idx_t ix, idx_t iy ) const;
     PointLonLat normalised_grid_master_lonlat( idx_t ix, idx_t iy ) const;
+    PointIJ orca_haloed_global_grid_ij( idx_t ix, idx_t iy ) const;
     idx_t orca_haloed_global_grid_index( idx_t ix, idx_t iy ) const;
     void flags( idx_t ix, idx_t iy, util::detail::BitflagsView<int>& flag_view ) const;
     bool water( idx_t ix, idx_t iy ) const;
@@ -76,8 +77,8 @@ class LocalOrcaGrid {
     uint64_t nx_orca_;
     uint64_t ny_orca_;
     uint64_t nb_used_nodes_;
-    uint64_t nb_real_nodes_;
-    uint64_t nb_ghost_nodes_;
+    uint64_t nb_used_real_nodes_;
+    uint64_t nb_used_ghost_nodes_;
     uint64_t nb_cells_;
     double lon00_;
     util::NormaliseLongitude lon00_normaliser_;

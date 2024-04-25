@@ -78,12 +78,9 @@ PointIJ SurroundingRectangle::global_periodic_ij(idx_t ix_glb, idx_t iy_glb) con
 }
 
 int SurroundingRectangle::index( int ix, int iy ) const {
-  PointIJ ij = this->global_periodic_ij(ix_min_ + i, iy_min_ + j);
-  ij.i = ij.i - ix_min_;
-  ij.j = ij.j - iy_min_;
-  ATLAS_ASSERT_MSG(ij.i < nx_, std::string("ij.i >= nx_: ") + std::to_string(ij.i) + " >= " + std::to_string(nx_));
-  ATLAS_ASSERT_MSG(ij.j < ny_, std::string("ij.j >= ny_: ") + std::to_string(ij.j) + " >= " + std::to_string(ny_));
-  return ij.j * nx_ + ij.i;
+  ATLAS_ASSERT_MSG(ix < nx_, std::string("ix >= nx_: ") + std::to_string(ix) + " >= " + std::to_string(nx_));
+  ATLAS_ASSERT_MSG(iy < ny_, std::string("iy >= ny_: ") + std::to_string(iy) + " >= " + std::to_string(ny_));
+  return iy * nx_ + ix;
 }
 
 int SurroundingRectangle::partition( idx_t i, idx_t j ) const {

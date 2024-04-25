@@ -99,6 +99,20 @@ CASE("test surrounding local_orca ") {
 
           idx_t reg_grid_glb_idx  = regular_grid.index(ix_glb, iy_glb);
           idx_t orca_grid_glb_idx = grid.periodicIndex(ix_glb, iy_glb);
+          gidx_t master_idx       = local_orca.master_global_index( i, j );
+          const auto master_global_ij = local_orca.master_global_ij( i, j );
+          ASSERT_MSG(master_global_ij.i < grid.nx(),
+             std::string("master_global_ij.i ") + std::to_string(master_global_ij.i)
+             + " grid.nx() " + std::to_string(grid.nx()) );
+          ASSERT_MSG(master_global_ij.j < grid.ny(),
+             std::string("master_global_ij.j ") + std::to_string(master_global_ij.j)
+             + " grid.ny() " + std::to_string(grid.ny()) );
+          ASSERT_MSG(master_global_ij.i >= -1,
+             std::string("master_global_ij.i ") + std::to_string(master_global_ij.i));
+          ASSERT_MSG(master_global_ij.j >= -1,
+             std::string("master_global_ij.j ") + std::to_string(master_global_ij.j));
+          const auto grid_xy        = local_orca.grid_xy( i, j );
+          const auto normed_grid_xy = local_orca.normalised_grid_xy( i, j );
           idx_t reg_grid_remote_idx = 0;
 
           if (local_orca.parts.at(ii) == cfg.mypart) {
@@ -112,7 +126,9 @@ CASE("test surrounding local_orca ") {
           std::count(local_orca.is_node.begin(), local_orca.is_node.end(), true);
       int total_is_ghost =
           std::count(local_orca.is_ghost.begin(), local_orca.is_ghost.end(), true);
-      EXPECT(total_is_node + total_is_ghost >= indices.size());
+      EXPECT(total_is_node <= indices.size());
+      EXPECT(total_is_node == local_orca.nb_used_nodes());
+      EXPECT(total_is_ghost >= local_orca.nb_used_ghost_nodes());
       EXPECT(indices.size() == local_orca.nx() * local_orca.ny());
 
       {
