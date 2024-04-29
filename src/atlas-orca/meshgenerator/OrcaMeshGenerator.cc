@@ -172,7 +172,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     auto iy_glb_max = iy_glb_min + ny_orca_halo;
     auto ix_glb_max = orca_grid.haloEast() + orca_grid.nx();
     auto ix_glb_min = -orca_grid.haloWest();
-
     // clone some grid properties
     setGrid( mesh, grid, distribution );
 
@@ -220,7 +219,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     int ix_pivot = SR_cfg.nx_glb / 2;
     bool patch   = not orca_grid.ghost( ix_pivot + 1, SR_cfg.ny_glb - 1 );
 
-    std::vector<idx_t> node_index( local_orca.nb_used_nodes(), -1 );
+    std::vector<idx_t> node_index( local_orca.nx()*local_orca.ny(), -1 );
 
     std::stringstream file_spec;
     file_spec << orca_grid.name() << "_" << distribution.type() << nparts_ << "_" << mypart_;
@@ -266,6 +265,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                 // node properties
                 if ( local_orca.is_node[ii] ) {
                     // set node counter
+                    ATLAS_ASSERT_MSG( ii < node_index.size(),
+                        std::to_string(ii) + " >= " + std::to_string(node_index.size()));
                     if ( local_orca.is_ghost[ii] ) {
                         node_index.at(ii) = inode_ghost++;
                     } else {
@@ -278,9 +279,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
             }
         }
 
-
         ATLAS_TRACE_SCOPE( "filling" )
-        //atlas_omp_parallel_for( idx_t iy = 0; iy < local_orca.ny(); iy++ ) {
         for( idx_t iy = 0; iy < local_orca.ny(); iy++ ) {
             ATLAS_ASSERT( local_orca.iy_min() + iy < ny_orca_halo );
             for ( idx_t ix = 0; ix < local_orca.nx(); ix++ ) {
@@ -290,7 +289,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                 if ( local_orca.is_node[ii] ) {
                     idx_t inode = node_index[ii];
                     ASSERT(ii < local_orca.is_ghost.size());
-                    ASSERT(ii < local_orca.nb_used_nodes());
+                    ASSERT(ii < local_orca.nx() * local_orca.ny());
                     ASSERT(inode < local_orca.nb_used_nodes());
 
                     // ghost nodes
@@ -321,7 +320,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     }
 
                     // part and remote_idx
-                    nodes.part( inode )           = local_orca.parts.at( ii );
+                    nodes.part( inode )           = local_orca.parts[ii];
                     nodes.remote_idx( inode )     = inode;
                     gidx_t master_idx             = local_orca.master_global_index( ix, iy );
                     nodes.master_glb_idx( inode ) = master_idx + 1;
@@ -337,12 +336,12 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     local_orca.flags( ix, iy, flags );
 
                     nodes.water( inode ) = local_orca.water( ix, iy );
-                    nodes.halo( inode ) = local_orca.halo.at( ii );
+                    nodes.halo( inode ) = local_orca.halo[ii];
                     // print diagnostic properties of nodes
-                    partition_file << inode << ", " << nodes.part( inode ) << std::endl;
-                    ghost_file << inode << ", " << nodes.ghost( inode ) << std::endl;
-                    xy_file << inode << ", " << nodes.xy( inode, 0 ) << ", " << nodes.xy( inode, 1 ) << std::endl;
-                    lonlat_file << inode << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 ) << std::endl;
+                    partition_file << inode << ", " << ii << ", " << nodes.part( inode ) << std::endl;
+                    ghost_file << inode << ", " << ii << ", " << nodes.ghost( inode ) << std::endl;
+                    xy_file << inode << ", " << ii << ", " << nodes.xy( inode, 0 ) << ", " << nodes.xy( inode, 1 ) << std::endl;
+                    lonlat_file << inode << ", " << ii << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 ) << std::endl;
                 }
                 is_node_file << local_orca.is_node.at( ii ) << std::endl;
             }
@@ -357,8 +356,11 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         for ( idx_t iy = 0; iy < local_orca.ny() - 1; iy++ ) {      // don't loop into ghost/periodicity row
             for ( idx_t ix = 0; ix < local_orca.nx() - 1; ix++ ) {  // don't loop into ghost/periodicity column
                 idx_t ii = local_orca.index( ix, iy );
-                if ( local_orca.is_ghost.at(ii) == 0 ) {
-                    cell_index.at(ii) = jcell++;
+                std::stringstream assert_msg;
+                assert_msg << ii << " > " << cell_index.size() << std::endl;
+                ATLAS_ASSERT(ii <  cell_index.size(), assert_msg.str());
+                if ( local_orca.is_ghost[ii] == 0 ) {
+                    cell_index[ii] = jcell++;
                 }
             }
         }
@@ -370,8 +372,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                 idx_t ii   = local_orca.index( ix, iy );
                 int ix_glb = local_orca.ix_min() + ix;
                 int iy_glb = local_orca.iy_min() + iy;
-                if ( !local_orca.is_ghost.at(ii) ) {
-                    idx_t jcell = cell_index.at(ii);
+                if ( !local_orca.is_ghost[ii] ) {
+                    idx_t jcell = cell_index[ii];
 
                     // define cell corners (local indices)
                     std::array<idx_t, 4> quad_nodes{};
@@ -460,13 +462,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         build_remote_index( mesh );
     }
 
-    // Degenerate points in the ORCA mesh mean that the standard BuildHalo
-    // methods for updating halo sizes will not work.
-    mesh.metadata().set("halo_locked", true);
-    mesh.metadata().set("halo", halosize_);
-    mesh.nodes().metadata().set<size_t>( "NbRealPts", local_orca.nb_used_real_nodes() );
-    mesh.nodes().metadata().set<size_t>( "NbVirtualPts", local_orca.nb_used_ghost_nodes() );
-
     summary_file.close();
     partition_file.close();
     ghost_file.close();
@@ -474,6 +469,13 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     xy_file.close();
     lonlat_file.close();
     cells_file.close();
+
+    // Degenerate points in the ORCA mesh mean that the standard BuildHalo
+    // methods for updating halo sizes will not work.
+    mesh.metadata().set("halo_locked", true);
+    mesh.metadata().set("halo", halosize_);
+    mesh.nodes().metadata().set<size_t>( "NbRealPts", local_orca.nb_used_real_nodes() );
+    mesh.nodes().metadata().set<size_t>( "NbVirtualPts", local_orca.nb_used_ghost_nodes() );
 }
 
 using Unique2Node = std::map<gidx_t, idx_t>;

@@ -26,6 +26,7 @@
 #include "atlas/util/Config.h"
 #include "atlas/util/function/VortexRollup.h"
 #include "atlas/util/Point.h"
+#include "atlas/util/Bitflags.h"
 
 #include "atlas-orca/grid/OrcaGrid.h"
 #include "atlas-orca/util/PointIJ.h"
@@ -86,8 +87,10 @@ CASE("test surrounding local_orca ") {
                 << " rectangle.iy_max " <<  rectangle.iy_max() << std::endl;
       orca::meshgenerator::LocalOrcaGrid local_orca(grid, rectangle);
 
-      std::vector<int> indices;
+      std::vector<idx_t> indices;
       std::vector<bool> this_partition;
+      int inode_ghost = local_orca.nb_used_real_nodes();  // orca ghost nodes start counting after nonghost nodes
+      int inode_nonghost = 0;
       for (uint64_t j = 0; j < local_orca.ny(); j++) {
         int iy_glb = local_orca.iy_min() + j;
         EXPECT(iy_glb < grid.ny() + grid.haloNorth() + grid.haloSouth());
@@ -120,6 +123,11 @@ CASE("test surrounding local_orca ") {
           } else {
             this_partition.emplace_back(false);
           }
+          const auto water = local_orca.water(i, j);
+          const auto halo = local_orca.halo.at(ii);
+          int flags = 0;
+          util::detail::BitflagsView<int> flags_view(flags);
+          local_orca.flags( i, j, flags_view );
         }
       }
       int total_is_node =

@@ -71,6 +71,7 @@ CASE( "test haloExchange " ) {
                     partitioner_config.set( "type", distributionName );
                     auto partitioner = grid::Partitioner( partitioner_config );
                     auto mesh        = meshgen.generate( grid, partitioner );
+                    std::cout << "mesh generator finished " << std::endl;
                     REQUIRE( mesh.grid() );
                     EXPECT( mesh.grid().name() == gridname );
                     idx_t count{ 0 };
@@ -87,6 +88,7 @@ CASE( "test haloExchange " ) {
                     auto f2           = array::make_view<double, 1>( field2 );
                     const auto ghosts = atlas::array::make_view<int32_t, 1>( mesh.nodes().ghost() );
                     const auto lonlat = array::make_view<double, 2>( mesh.nodes().lonlat() );
+                    std::cout << "begin loop over mesh nodes " << std::endl;
                     for ( idx_t jnode = 0; jnode < mesh.nodes().size(); ++jnode ) {
                         if ( ghosts( jnode ) ) {
                             f( jnode ) = 0;
