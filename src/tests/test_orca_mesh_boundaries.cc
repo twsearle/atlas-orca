@@ -48,8 +48,8 @@ CASE( "test haloExchange " ) {
 //        "eORCA12_T",  //
     };
     auto distributionNames = std::vector<std::string>{
-      // "serial",
-      "checkerboard",
+      "serial",
+      //"checkerboard",
       // "equal_regions",
       // "equal_area",
     };

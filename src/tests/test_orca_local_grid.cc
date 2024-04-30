@@ -116,7 +116,6 @@ CASE("test surrounding local_orca ") {
              std::string("master_global_ij.j ") + std::to_string(master_global_ij.j));
           const auto grid_xy        = local_orca.grid_xy( i, j );
           const auto normed_grid_xy = local_orca.normalised_grid_xy( i, j );
-          idx_t reg_grid_remote_idx = 0;
 
           if (local_orca.parts.at(ii) == cfg.mypart) {
             this_partition.emplace_back(true);
@@ -128,6 +127,19 @@ CASE("test surrounding local_orca ") {
           int flags = 0;
           util::detail::BitflagsView<int> flags_view(flags);
           local_orca.flags( i, j, flags_view );
+
+          // check points in the orca halo behave as expected.
+          if ((ix_glb > grid.nx()) ||
+              (ix_glb > grid.nx()/2 && iy_glb > grid.ny())) {
+            //std::cout << "ix_glb, iy_glb : " << ix_glb << ", " << iy_glb << " is_ghost "  << local_orca.is_ghost.at(ii)
+            // << "local_orca.master_global_index(i, j) != local_orca.orca_haloed_global_grid_index(i,j)"
+            // << local_orca.master_global_index(i, j) << " != " << local_orca.orca_haloed_global_grid_index(i,j) << std::endl;
+            // this grid point should be a ghost point.
+            EXPECT(local_orca.is_ghost.at(ii) > 0);
+            // this grid point should not be a master grid point.
+            EXPECT(local_orca.master_global_index(i, j)
+                   != local_orca.orca_haloed_global_grid_index(i,j));
+          }
         }
       }
       int total_is_node =
@@ -135,7 +147,8 @@ CASE("test surrounding local_orca ") {
       int total_is_ghost =
           std::count(local_orca.is_ghost.begin(), local_orca.is_ghost.end(), true);
       EXPECT(total_is_node <= indices.size());
-      EXPECT(total_is_node == local_orca.nb_used_nodes());
+      if (distributionName == "serial")
+        EXPECT(local_orca.nb_used_nodes() == local_orca.nx() * local_orca.ny());
       EXPECT(total_is_ghost >= local_orca.nb_used_ghost_nodes());
       EXPECT(indices.size() == local_orca.nx() * local_orca.ny());
 
