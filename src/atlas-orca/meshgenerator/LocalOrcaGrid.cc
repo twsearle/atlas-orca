@@ -151,12 +151,12 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   }
 
   // adjust ghost points based on orca halo ghost info
-  is_ghost_including_orca_halo.resize( size_, 1 );
+  is_ghost_including_orca_halo.resize( size_, 0 );
   for( size_t iy = 0; iy < ny_orca_; iy++ ) {
     for ( size_t ix = 0; ix < nx_orca_; ix++ ) {
       idx_t ii = index( ix, iy );
       const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
-      if ( ij_glb.j > 0 or ij_glb.i < 0 ) {
+      if ( ij_glb.j >= 0 ) {
         is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb.i, ij_glb.j );
       }
     }
