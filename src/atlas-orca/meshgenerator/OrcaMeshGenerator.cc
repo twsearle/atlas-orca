@@ -169,9 +169,9 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     auto ny_orca_halo = orca_grid.ny() + orca_grid.haloNorth() + orca_grid.haloSouth();
     auto nx_orca_halo = orca_grid.nx() + orca_grid.haloEast() + orca_grid.haloWest();
     auto iy_glb_min = -orca_grid.haloSouth();
-    auto iy_glb_max = iy_glb_min + ny_orca_halo;
-    auto ix_glb_max = orca_grid.haloEast() + orca_grid.nx();
+    auto iy_glb_max = iy_glb_min + orca_grid.ny() + orca_grid.haloNorth();
     auto ix_glb_min = -orca_grid.haloWest();
+    auto ix_glb_max = ix_glb_min + orca_grid.nx() + orca_grid.haloEast();
     // clone some grid properties
     setGrid( mesh, grid, distribution );
 
@@ -494,8 +494,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     // methods for updating halo sizes will not work.
     mesh.metadata().set("halo_locked", true);
     mesh.metadata().set("halo", halosize_);
-    mesh.nodes().metadata().set<size_t>( "NbRealPts", local_orca.nb_used_real_nodes() );
-    mesh.nodes().metadata().set<size_t>( "NbVirtualPts", local_orca.nb_used_ghost_nodes() );
+    mesh.nodes().metadata().set<size_t>( "NbRealPts", local_orca.nb_used_nodes() );
+    mesh.nodes().metadata().set<size_t>( "NbVirtualPts", 0 );
 }
 
 using Unique2Node = std::map<gidx_t, idx_t>;

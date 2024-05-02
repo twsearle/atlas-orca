@@ -148,7 +148,6 @@ SurroundingRectangle::SurroundingRectangle(
                   int p_halo = global_partition( ix_glb + dhx, iy_glb + dhy );
 
                   if ( p_halo == cfg_.mypart ) {
-                    //nb_real_nodes_owned_by_rectangle_TP++;
                     if (ix_max_TP < ix_glb) logFile << "[" << cfg_.mypart << "] ix_max bumped by halo: hx " << ix_glb + dhx << " ix_glb " << ix_glb << " ix_max_TP " << ix_max_TP << std::endl;
                     iy_min_TP = std::min<idx_t>( iy_min_TP, iy_glb );
                     iy_max_TP = std::max<idx_t>( iy_max_TP, iy_glb );
@@ -158,14 +157,14 @@ SurroundingRectangle::SurroundingRectangle(
               }
             }();
           }
-          atlas_omp_critical {
-            nb_real_nodes_owned_by_rectangle += nb_real_nodes_owned_by_rectangle_TP;
-            ix_min_ = std::min<int>( ix_min_TP, ix_min_);
-            ix_max_ = std::max<int>( ix_max_TP, ix_max_);
-            iy_min_ = std::min<int>( iy_min_TP, iy_min_);
-            iy_max_ = std::max<int>( iy_max_TP, iy_max_);
-          }
         }
+      }
+      atlas_omp_critical {
+        nb_real_nodes_owned_by_rectangle += nb_real_nodes_owned_by_rectangle_TP;
+        ix_min_ = std::min<int>( ix_min_TP, ix_min_);
+        ix_max_ = std::max<int>( ix_max_TP, ix_max_);
+        iy_min_ = std::min<int>( iy_min_TP, iy_min_);
+        iy_max_ = std::max<int>( iy_max_TP, iy_max_);
       }
     }
   }

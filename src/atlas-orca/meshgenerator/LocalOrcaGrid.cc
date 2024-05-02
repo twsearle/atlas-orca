@@ -42,15 +42,15 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   if (rectangle.ix_min() <= 0) {
     ix_orca_min_ -= orca_.haloWest();
   }
-  if (rectangle.ix_max() >= orca_.nx()) {
-    ix_orca_max_ += orca_.haloEast();
-  }
+  //if (rectangle.ix_max() >= orca_.nx()) {
+  //  ix_orca_max_ += orca_.haloEast();
+  //}
   if (rectangle.iy_min() <= 0) {
     iy_orca_min_ -= orca_.haloSouth();
   }
-  if (rectangle.iy_max() >= orca_.ny()) {
-    iy_orca_max_ += orca_.haloNorth();
-  }
+  //if (rectangle.iy_max() >= orca_.ny()) {
+  //  iy_orca_max_ += orca_.haloNorth();
+  //}
 
   std::cout << " orca_.nx() " << orca_.nx()
             << " orca_.ny() " << orca_.ny() << std::endl;
@@ -106,9 +106,6 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         } else {
             is_ghost.at( ii ) = 1;
         }
-        if ( ij_glb.j > 0 or ij_glb.i < 0 ) {
-          is_ghost.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb.i, ij_glb.j );
-        }
       }
     }
   }
@@ -149,6 +146,17 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
           mark_node_used( ix + 1, iy + 1 );
           mark_node_used( ix, iy + 1 );
         } // if not ghost index
+      }
+    }
+  }
+
+  // adjust ghost points based on orca halo ghost info
+  for( size_t iy = 0; iy < ny_orca_; iy++ ) {
+    for ( size_t ix = 0; ix < nx_orca_; ix++ ) {
+      idx_t ii = index( ix, iy );
+      const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
+      if ( ij_glb.j > 0 or ij_glb.i < 0 ) {
+        is_ghost.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb.i, ij_glb.j );
       }
     }
   }

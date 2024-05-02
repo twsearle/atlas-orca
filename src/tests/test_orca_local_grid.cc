@@ -186,16 +186,16 @@ CASE("test surrounding local_orca ") {
           EXPECT(local_orca.iy_max() == grid.ny() + grid.haloNorth() + halo);
           EXPECT(local_orca.ix_min() == -1 - halo);
           EXPECT(local_orca.ix_max() == 90 + halo);
-          EXPECT(local_orca.nx() == grid.nx()/2 + grid.haloEast() + grid.haloWest() + 2*halo);
-          EXPECT(local_orca.ny() == grid.ny() + cell_width + grid.haloSouth() + grid.haloNorth() + 2*halo);
+          EXPECT(local_orca.nx() == grid.nx()/2 + grid.haloWest() + 2*halo);
+          EXPECT(local_orca.ny() == grid.ny() + cell_width + grid.haloNorth() + 2*halo);
         }
         if (cfg.mypart == 1) {
           EXPECT(local_orca.iy_min() == -1);
           EXPECT(local_orca.iy_max() == grid.ny() + grid.haloNorth() + halo);
           EXPECT(local_orca.ix_min() == 90 - halo);
           EXPECT(local_orca.ix_max() == grid.nx() + grid.haloEast() + halo);
-          EXPECT(local_orca.nx() == grid.nx()/2 + grid.haloEast() + grid.haloWest() + 2*halo);
-          EXPECT(local_orca.ny() == grid.ny() + cell_width + grid.haloSouth() + grid.haloNorth() + 2*halo);
+          EXPECT(local_orca.nx() == grid.nx()/2 + grid.haloWest() + 2*halo);
+          EXPECT(local_orca.ny() == grid.ny() + cell_width + grid.haloNorth() + 2*halo);
         }
       }
     }
