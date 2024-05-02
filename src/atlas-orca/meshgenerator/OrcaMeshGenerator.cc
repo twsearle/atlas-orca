@@ -192,6 +192,9 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         ATLAS_ASSERT_MSG(iy_glb_min == local_orca.iy_min(),
           std::string("Size of the surrounding rectangle y-space doesn't match up with orca-grid y-space: ")
           + std::to_string(iy_glb_min) + " != " + std::to_string(local_orca.iy_min()) );
+        ATLAS_ASSERT_MSG(nx_orca_halo * ny_orca_halo == local_orca.nb_used_nodes(),
+          std::string("Number of used nodes doesn't match total size of orca grid plus halo: ")
+          + std::to_string(nx_orca_halo * ny_orca_halo) + " != " + std::to_string(local_orca.nb_used_nodes()) );
     }
     ATLAS_ASSERT_MSG(local_orca.nb_used_real_nodes() + local_orca.nb_used_ghost_nodes() == local_orca.nb_used_nodes(),
       std::string("Number of nodes in mesh does not equal the total size of the surrounding rectangle")
@@ -258,13 +261,34 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                  << "\nlocal_orca.nb_used_ghost_nodes " << local_orca.nb_used_ghost_nodes()
                  << "\nlocal_orca.nb_used_nodes " << local_orca.nb_used_nodes()
                  << std::endl;
+    int total_is_node = std::count(local_orca.is_node.begin(), local_orca.is_node.end(), true);
+    int total_is_ghost = std::count(local_orca.is_ghost.begin(), local_orca.is_ghost.end(), true);
+    std::cout    << "SR.nx " << SR.nx()
+                 << "\nSR.ny " << SR.ny()
+                 << "\nSR.ix_min " << SR.ix_min()
+                 << "\nSR.ix_max " << SR.ix_max()
+                 << "\nSR.iy_min " << SR.iy_min()
+                 << "\nSR.iy_max " << SR.iy_max()
+                 << "\nSR.nb_nodes_owned " << SR.nb_real_nodes_owned_by_rectangle
+                 << "\nlocal_orca.nx " << local_orca.nx()
+                 << "\nlocal_orca.ny " << local_orca.ny()
+                 << "\nlocal_orca.ix_min " << local_orca.ix_min()
+                 << "\nlocal_orca.ix_max " << local_orca.ix_max()
+                 << "\nlocal_orca.iy_min " << local_orca.iy_min()
+                 << "\nlocal_orca.iy_max " << local_orca.iy_max()
+                 << "\nlocal_orca.nb_used_real_nodes " << local_orca.nb_used_real_nodes()
+                 << "\nlocal_orca.nb_used_ghost_nodes " << local_orca.nb_used_ghost_nodes()
+                 << "\nlocal_orca.nb_used_nodes " << local_orca.nb_used_nodes()
+                 << "\ntotal is node " << total_is_node
+                 << "\ntotal is ghost" << total_is_ghost
+                 << std::endl;
 
     {
         ATLAS_TRACE( "nodes" );
 
         // loop over nodes and set properties
         inode_nonghost = 0;
-        inode_ghost    = local_orca.nb_used_real_nodes();  // orca ghost nodes start counting after nonghost nodes
+        inode_ghost    = local_orca.nb_used_real_nodes();  // orca ghost nodes don't count as ghost nodes for this stuff?... something to do with the orca grid?
 
         ATLAS_TRACE_SCOPE( "indexing" )
         for ( idx_t iy = 0; iy < local_orca.ny(); iy++ ) {
@@ -301,7 +325,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     ASSERT(inode < local_orca.nb_used_nodes());
 
                     // ghost nodes
-                    nodes.ghost( inode ) = local_orca.is_ghost[ii];
+                    nodes.ghost( inode ) = local_orca.is_ghost_including_orca_halo[ii];
 
                     // global index
                     nodes.glb_idx( inode ) = local_orca.orca_haloed_global_grid_index( ix, iy ) + 1;

@@ -36,6 +36,7 @@ class LocalOrcaGrid {
  public:
     std::vector<int> parts;
     std::vector<int> halo;
+    std::vector<int> is_ghost_including_orca_halo;
     std::vector<int> is_ghost;
     std::vector<int> is_node;
     uint64_t size() const {return size_;}

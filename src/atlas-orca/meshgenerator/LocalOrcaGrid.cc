@@ -65,13 +65,13 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   nx_orca_ = ix_orca_max_ - ix_orca_min_ + 1;
   ny_orca_ = iy_orca_max_ - iy_orca_min_ + 1;
   size_ = nx_orca_ * ny_orca_;
-  std::cout << "size_ " << size_ << std::endl;
+  std::cout << "nx_orca_ " << nx_orca_ << " ny_orca_ " << ny_orca_ << " size_ " << size_ << std::endl;
 
   // partitions and local indices in surrounding rectangle
   parts.resize( size_, -1 );
   halo.resize( size_, 0 );
   is_node.resize( size_, false );
-  is_ghost.resize( size_, true );
+  is_ghost.resize( size_, 1 );
   nb_used_real_nodes_ = 0;
   nb_used_ghost_nodes_ = 0;
   uint16_t nb_used_halo_nodes = 0;
@@ -151,12 +151,13 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   }
 
   // adjust ghost points based on orca halo ghost info
+  is_ghost_including_orca_halo.resize( size_, 1 );
   for( size_t iy = 0; iy < ny_orca_; iy++ ) {
     for ( size_t ix = 0; ix < nx_orca_; ix++ ) {
       idx_t ii = index( ix, iy );
       const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
       if ( ij_glb.j > 0 or ij_glb.i < 0 ) {
-        is_ghost.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb.i, ij_glb.j );
+        is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb.i, ij_glb.j );
       }
     }
   }
