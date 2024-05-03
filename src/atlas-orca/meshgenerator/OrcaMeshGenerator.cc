@@ -365,7 +365,10 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                           static_cast<int>( master_idx ) : -1;
                     }
 
-                    ATLAS_ASSERT(nodes.remote_idx( inode ) > -1, std::string("remote index is -1:  " + std::to_string(nodes.remote_idx( inode ))));
+                    if ( serial_distribution ) {
+                      ATLAS_ASSERT(nodes.remote_idx( inode ) > -1,
+                                   std::string("remote index is -1:  " + std::to_string(nodes.remote_idx( inode ))));
+                    }
 
                     local_orca.flags( ix, iy, flags );
 

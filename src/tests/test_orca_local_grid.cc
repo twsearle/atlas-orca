@@ -168,7 +168,8 @@ CASE("test surrounding local_orca ") {
                   << " ix_orca_min " << local_orca.ix_min() << " ix_orca_max "
                   << local_orca.ix_max() << " iy_orca_min " << local_orca.iy_min()
                   << " iy_orca_max " << local_orca.iy_max() << " indices.size() "
-                  << indices.size() << " nx*ny " << local_orca.nx() * local_orca.ny()
+                  << indices.size() << " nx * ny " << local_orca.nx() << " * " << local_orca.ny()
+                  << " " << local_orca.nx() * local_orca.ny()
                   << " number on this partition " << total_on_partition
                   << " number not on partition " << not_on_partition << std::endl;
 
@@ -183,18 +184,18 @@ CASE("test surrounding local_orca ") {
       if (cfg.nparts == 2) {
         if (cfg.mypart == 0) {
           EXPECT(local_orca.iy_min() == -1);
-          EXPECT(local_orca.iy_max() == grid.ny() + grid.haloNorth() + halo);
+          EXPECT(local_orca.iy_max() == grid.ny() + halo);
           EXPECT(local_orca.ix_min() == -1 - halo);
           EXPECT(local_orca.ix_max() == 90 + halo);
-          EXPECT(local_orca.nx() == grid.nx()/2 + grid.haloWest() + 2*halo);
+          EXPECT(local_orca.nx() == 91 + grid.haloEast() + 2*halo);
           EXPECT(local_orca.ny() == grid.ny() + cell_width + grid.haloNorth() + 2*halo);
         }
         if (cfg.mypart == 1) {
           EXPECT(local_orca.iy_min() == -1);
-          EXPECT(local_orca.iy_max() == grid.ny() + grid.haloNorth() + halo);
+          EXPECT(local_orca.iy_max() == grid.ny() + halo);
           EXPECT(local_orca.ix_min() == 90 - halo);
-          EXPECT(local_orca.ix_max() == grid.nx() + grid.haloEast() + halo);
-          EXPECT(local_orca.nx() == grid.nx()/2 + grid.haloWest() + 2*halo);
+          EXPECT(local_orca.ix_max() == grid.nx() + halo);
+          EXPECT(local_orca.nx() == 90 + grid.haloWest() + 2*halo);
           EXPECT(local_orca.ny() == grid.ny() + cell_width + grid.haloNorth() + 2*halo);
         }
       }
