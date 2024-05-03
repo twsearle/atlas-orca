@@ -381,7 +381,16 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     lonlat_file << inode << ", " << ii << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 ) << std::endl;
                     if ((nodes.ij( inode, XX ) > orca_grid.nx()) ||
                         (nodes.ij( inode, XX ) > orca_grid.nx()/2 &&  nodes.ij( inode, YY ) > orca_grid.ny())) {
-                    orca_halo_file << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
+                      orca_halo_file << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
+                                                            << ", " << nodes.part( inode )
+                                                            << ", " << nodes.ghost( inode )
+                                                            << ", " << nodes.remote_idx( inode )
+                                                            << ", " << nodes.glb_idx( inode )
+                                                            << ", " << nodes.master_glb_idx( inode ) << std::endl;
+                    }
+                    // this node doesn't seem to belong on any partition when I build the remote indices
+                    if ( nodes.master_glb_idx( inode ) == 26575 ) {
+                      std::cout << "[" << mypart_ << "] " << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
                                                           << ", " << nodes.part( inode )
                                                           << ", " << nodes.ghost( inode )
                                                           << ", " << nodes.remote_idx( inode )
