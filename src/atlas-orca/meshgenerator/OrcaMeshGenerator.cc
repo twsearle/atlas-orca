@@ -560,7 +560,7 @@ void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
     auto ridx           = array::make_indexview<idx_t, 1>( nodes.remote_index() );
     auto part           = array::make_view<int, 1>( nodes.partition() );
     auto ghost          = array::make_view<int, 1>( nodes.ghost() );
-    auto ij             = array::make_view<idx_t, 2> ij( nodes.field("ij"));
+    auto ij             = array::make_view<idx_t, 2>( nodes.field("ij"));
 
     // find the nodes I want to request the data for
     std::vector<std::vector<gidx_t>> send_uid( mpi_size );
