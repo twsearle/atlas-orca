@@ -169,9 +169,9 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     auto ny_orca_halo = orca_grid.ny() + orca_grid.haloNorth() + orca_grid.haloSouth();
     auto nx_orca_halo = orca_grid.nx() + orca_grid.haloEast() + orca_grid.haloWest();
     auto iy_glb_min = -orca_grid.haloSouth();
-    auto iy_glb_max = iy_glb_min + orca_grid.ny() + orca_grid.haloNorth();
+    auto iy_glb_max = orca_grid.ny() + orca_grid.haloNorth() - 1;
     auto ix_glb_min = -orca_grid.haloWest();
-    auto ix_glb_max = ix_glb_min + orca_grid.nx() + orca_grid.haloEast();
+    auto ix_glb_max = orca_grid.nx() + orca_grid.haloEast() - 1;
     // clone some grid properties
     setGrid( mesh, grid, distribution );
 
