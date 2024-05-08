@@ -389,8 +389,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                                                             << ", " << nodes.master_glb_idx( inode ) << std::endl;
                     }
                     // this node doesn't seem to belong on any partition when I build the remote indices
-                    if ( ( nodes.master_glb_idx( inode ) == 26575 ) ||
-                         ( nodes.master_glb_idx( inode ) == 363 ) ) {
+                    if ( ( nodes.master_glb_idx( inode ) == 26575 ) ) {
                       std::cout << "[" << mypart_ << "] " << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
                                                           << ", " << nodes.part( inode )
                                                           << ", " << nodes.ghost( inode )
