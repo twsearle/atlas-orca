@@ -559,6 +559,17 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                                                           << ", " << nodes.remote_idx( inode )
                                                           << ", " << nodes.glb_idx( inode )
                                                           << ", " << nodes.master_glb_idx( inode ) << std::endl;
+                    }
+                    if ( ( nodes.master_glb_idx( inode ) == 26575 ) ||
+                         ( nodes.master_glb_idx( inode ) == 363 ) ) {
+                      std::cout << "[" << mypart_ << "] " << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
+                                                          << ", " << nodes.part( inode )
+                                                          << ", " << nodes.ghost( inode )
+                                                          << ", " << nodes.remote_idx( inode )
+                                                          << ", " << nodes.glb_idx( inode )
+                                                          << ", " << nodes.master_glb_idx( inode ) << std::endl;
+                    }
+                }
                 }
                 is_node_file << SR.is_node[ii] << std::endl;
             }
@@ -716,11 +727,15 @@ void OrcaMeshGenerator::build_remote_index( Mesh& mesh ) {
     auto ridx           = array::make_indexview<idx_t, 1>( nodes.remote_index() );
     auto part           = array::make_view<int, 1>( nodes.partition() );
     auto ghost          = array::make_view<int, 1>( nodes.ghost() );
+    auto ij             = array::make_view<idx_t, 2>( nodes.field("ij"));
 
     // find the nodes I want to request the data for
     std::vector<std::vector<gidx_t>> send_uid( mpi_size );
     std::vector<std::vector<int>> req_lidx( mpi_size );
 
+    std::ofstream global2local_file;
+    global2local_file.open(std::string("global2local_") + std::to_string(mypart) + ".txt");
+    global2local_file << "uid, jnode" << std::endl;
     Unique2Node global2local;
     for ( idx_t jnode = 0; jnode < nodes.size(); ++jnode ) {
         gidx_t uid = master_glb_idx( jnode );
@@ -733,12 +748,22 @@ void OrcaMeshGenerator::build_remote_index( Mesh& mesh ) {
         else {
             ridx( jnode ) = jnode;
         }
+        if ( uid == 26575 ) {
+            std::cout << "[" << mypart << "] " << jnode << ", --, " << ij( jnode, XX ) << ", " << ij( jnode, YY )
+                                                << ", " << part( jnode )
+                                                << ", " << ghost( jnode )
+                                                << ", " << ridx( jnode )
+                                                << ", " << glb_idx( jnode )
+                                                << ", " << master_glb_idx( jnode ) << std::endl;
+        }
         if ( ghost( jnode ) == 0 ) {
             bool inserted = global2local.insert( std::make_pair( uid, jnode ) ).second;
             ATLAS_ASSERT( inserted, std::string( "index already inserted " ) + std::to_string( uid ) + ", " +
                                         std::to_string( jnode ) + " at jnode " + std::to_string( global2local[uid] ) );
+            global2local_file << uid << ", " << jnode << std::endl;
         }
     }
+    global2local_file.close();
 
     std::vector<std::vector<gidx_t>> recv_uid( mpi_size );
 
