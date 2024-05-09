@@ -169,9 +169,9 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     auto ny_orca_halo = orca_grid.ny() + orca_grid.haloNorth() + orca_grid.haloSouth();
     auto nx_orca_halo = orca_grid.nx() + orca_grid.haloEast() + orca_grid.haloWest();
     auto iy_glb_min = -orca_grid.haloSouth();
-    auto iy_glb_max = orca_grid.ny() + orca_grid.haloNorth() - 1;
+    auto iy_glb_max = iy_glb_min + orca_grid.ny() + orca_grid.haloNorth();
     auto ix_glb_min = -orca_grid.haloWest();
-    auto ix_glb_max = orca_grid.nx() + orca_grid.haloEast() - 1;
+    auto ix_glb_max = ix_glb_min + orca_grid.nx() + orca_grid.haloEast();
     // clone some grid properties
     setGrid( mesh, grid, distribution );
 
@@ -389,8 +389,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                                                             << ", " << nodes.master_glb_idx( inode ) << std::endl;
                     }
                     // this node doesn't seem to belong on any partition when I build the remote indices
-                    if ( ( nodes.master_glb_idx( inode ) == 26575 ) ||
-                         ( nodes.master_glb_idx( inode ) == 363 ) ) {
+                    if ( ( nodes.master_glb_idx( inode ) == 26575 ) ) {
                       std::cout << "[" << mypart_ << "] " << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
                                                           << ", " << nodes.part( inode )
                                                           << ", " << nodes.ghost( inode )
@@ -564,7 +563,7 @@ void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
 
     // find the nodes I want to request the data for
     std::vector<std::vector<gidx_t>> send_uid( mpi_size );
-    std::vector<std::vector<int>> send_req_lidx( mpi_size );
+    std::vector<std::vector<int>> req_lidx( mpi_size );
 
     std::ofstream global2local_file;
     global2local_file.open(std::string("global2local_") + std::to_string(mypart) + ".txt");
@@ -574,16 +573,22 @@ void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
         gidx_t uid = master_glb_idx( jnode );
         if ( ( part( jnode ) != mypart ) ||
              ( ( master_glb_idx( jnode ) != glb_idx( jnode ) ) && ( part( jnode ) == mypart ) ) ) {
-            for ( idx_t p = 0; p < mpi_size; ++p ) {
-                send_uid[p].push_back( uid );
-                send_req_lidx[p].push_back( jnode );
-            }
+            send_uid[part( jnode )].push_back( uid );
+            req_lidx[part( jnode )].push_back( jnode );
             ridx( jnode ) = -1;
         }
         else {
             ridx( jnode ) = jnode;
         }
-        if ( ghost( jnode ) == 0 && master_glb_idx( jnode ) == glb_idx( jnode ) ) {
+        if ( uid == 26575 ) {
+            std::cout << "[" << mypart << "] " << jnode << ", --, " << ij( jnode, XX ) << ", " << ij( jnode, YY )
+                                                << ", " << part( jnode )
+                                                << ", " << ghost( jnode )
+                                                << ", " << ridx( jnode )
+                                                << ", " << glb_idx( jnode )
+                                                << ", " << master_glb_idx( jnode ) << std::endl;
+        }
+        if ( ghost( jnode ) == 0 ) {
             bool inserted = global2local.insert( std::make_pair( uid, jnode ) ).second;
             ATLAS_ASSERT( inserted, std::string( "index already inserted " ) + std::to_string( uid ) + ", " +
                                         std::to_string( jnode ) + " at jnode " + std::to_string( global2local[uid] ) );
@@ -593,48 +598,43 @@ void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
     global2local_file.close();
 
     std::vector<std::vector<gidx_t>> recv_uid( mpi_size );
-    std::vector<std::vector<int>> recv_req_lidx( mpi_size );
 
     // Request data from those indices
     mpi::comm().allToAll( send_uid, recv_uid );
-    mpi::comm().allToAll( send_req_lidx, recv_req_lidx );
 
     // Find and populate send vector with indices to send
     std::vector<std::vector<int>> send_ridx( mpi_size );
     std::vector<std::vector<int>> send_gidx( mpi_size );
     std::vector<std::vector<int>> send_part( mpi_size );
-    std::vector<std::vector<int>> send_lidx( mpi_size );
     for ( idx_t p = 0; p < mpi_size; ++p ) {
         for ( idx_t i = 0; i < recv_uid[p].size(); ++i ) {
             idx_t found_idx = -1;
             gidx_t uid      = recv_uid[p][i];
             if ( auto found = global2local.find( uid ); found != global2local.end() ) {
-                found_idx = found->second;           
-                send_ridx[p].push_back( ridx( found_idx ) );
-                send_gidx[p].push_back( static_cast<int>( glb_idx( found_idx ) ) );
-                send_part[p].push_back( part( found_idx ) );
-                send_lidx[p].push_back( recv_req_lidx[p][i] );
+                found_idx = found->second;
             }
+
+            ATLAS_ASSERT( found_idx != -1, "master global index not found: " + std::to_string( uid ) + " for sent element index: " + std::to_string( i ) );
+            send_ridx[p].push_back( ridx( found_idx ) );
+            send_gidx[p].push_back( static_cast<int>( glb_idx( found_idx ) ) );
+            send_part[p].push_back( part( found_idx ) );
         }
     }
 
     std::vector<std::vector<int>> recv_ridx( mpi_size );
     std::vector<std::vector<int>> recv_gidx( mpi_size );
     std::vector<std::vector<int>> recv_part( mpi_size );
-    std::vector<std::vector<int>> recv_lidx( mpi_size );
 
     mpi::comm().allToAll( send_ridx, recv_ridx );
     mpi::comm().allToAll( send_gidx, recv_gidx );
     mpi::comm().allToAll( send_part, recv_part );
-    mpi::comm().allToAll( send_lidx, recv_lidx );
 
     // Fill out missing remote indices
     for ( idx_t p = 0; p < mpi_size; ++p ) {
         for ( idx_t i = 0; i < recv_ridx[p].size(); ++i ) {
-            ATLAS_ASSERT( ridx( recv_lidx[p][i] ) == -1, "ridx already filled at " + std::to_string( recv_lidx[p][i] ) + " in part " + std::to_string( mypart ));
-            ridx( recv_lidx[p][i] )    = recv_ridx[p][i];
-            glb_idx( recv_lidx[p][i] ) = recv_gidx[p][i];
-            part( recv_lidx[p][i] )    = recv_part[p][i];
+            ridx( req_lidx[p][i] )    = recv_ridx[p][i];
+            glb_idx( req_lidx[p][i] ) = recv_gidx[p][i];
+            part( req_lidx[p][i] )    = recv_part[p][i];
         }
     }
 

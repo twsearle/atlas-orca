@@ -40,17 +40,17 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 
   // Add on the orca halo points if we are at the edge of the orca grid.
   if (rectangle.ix_min() <= 0) {
-    ix_orca_min_ = -orca_.haloWest();
+    ix_orca_min_ -= orca_.haloWest();
   }
-  if (rectangle.ix_max() >= orca_.nx()) {
-    ix_orca_max_ = orca_.nx() + orca_.haloEast() - 1;
-  }
+  //if (rectangle.ix_max() >= orca_.nx()) {
+  //  ix_orca_max_ += orca_.haloEast();
+  //}
   if (rectangle.iy_min() <= 0) {
-    iy_orca_min_ = -orca_.haloSouth();
+    iy_orca_min_ -= orca_.haloSouth();
   }
-  if (rectangle.iy_max() >= orca_.ny()) {
-    iy_orca_max_ = orca_.ny() + orca_.haloNorth() - 1;
-  }
+  //if (rectangle.iy_max() >= orca_.ny()) {
+  //  iy_orca_max_ += orca_.haloNorth();
+  //}
 
   std::cout << " orca_.nx() " << orca_.nx()
             << " orca_.ny() " << orca_.ny() << std::endl;
@@ -155,9 +155,13 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   for( size_t iy = 0; iy < ny_orca_; iy++ ) {
     for ( size_t ix = 0; ix < nx_orca_; ix++ ) {
       idx_t ii = index( ix, iy );
-      const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
-      if ( (ij_glb.j >= 0) || (ij_glb.i < 0) || (ij_glb.i >= orca_.nx()) ) {
-        is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb.i, ij_glb.j );
+      const auto ij_glb_haloed = this->orca_haloed_global_grid_ij( ix, iy );
+      if ( (ij_glb_haloed.j >= 0) || (ij_glb_haloed.i < 0) || (ij_glb_haloed.i >= orca_.nx()) ) {
+        is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb_haloed.i, ij_glb_haloed.j );
+      }
+      if ( is_ghost_including_orca_halo.at( ii ) != 0 ) {
+        const auto ij_glb = this->master_global_ij( ix, iy );
+        parts.at(ii) = rectangle.global_partition(ij_glb.i, ij_glb.j);
       }
     }
   }
