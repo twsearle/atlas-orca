@@ -47,6 +47,10 @@ class SurroundingRectangle {
         int halosize;
         int nx_glb;
         int ny_glb;
+        int ix_glb_min;
+        int ix_glb_max;
+        int iy_glb_min;
+        int iy_glb_max;
         Configuration() :
             nparts(std::numeric_limits<int>::lowest())
             , mypart(std::numeric_limits<int>::lowest())
@@ -70,6 +74,7 @@ class SurroundingRectangle {
     int index( int i, int j ) const;
     int partition( idx_t i, idx_t j ) const;
     int global_partition( idx_t ix_glb, idx_t iy_glb ) const;
+    int clamped_partition( idx_t ix_glb, idx_t iy_glb ) const;
     std::vector<int> parts;
     std::vector<int> halo;
     std::vector<int> is_ghost;

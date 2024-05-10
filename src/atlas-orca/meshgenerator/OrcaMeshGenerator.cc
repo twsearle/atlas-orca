@@ -154,24 +154,29 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     ATLAS_ASSERT( orca_grid );
     ATLAS_ASSERT( !mesh.generated() );
 
-    // global (all processor) configuration information about ORCA grid for the ORCA mesh under construction
-    SurroundingRectangle::Configuration SR_cfg;
-    SR_cfg.mypart = mypart_;
-    SR_cfg.nparts = nparts_;
-    SR_cfg.halosize = halosize_;
-    SR_cfg.nx_glb = orca_grid.nx();
-    SR_cfg.ny_glb = orca_grid.ny();
-
-    SurroundingRectangle SR(distribution, SR_cfg);
-    LocalOrcaGrid local_orca(orca_grid, SR);
-
     // global orca grid dimensions and index limits
     auto ny_orca_halo = orca_grid.ny() + orca_grid.haloNorth() + orca_grid.haloSouth();
     auto nx_orca_halo = orca_grid.nx() + orca_grid.haloEast() + orca_grid.haloWest();
     auto iy_glb_min = -orca_grid.haloSouth();
-    auto iy_glb_max = iy_glb_min + orca_grid.ny() + orca_grid.haloNorth();
+    auto iy_glb_max = orca_grid.ny() + orca_grid.haloNorth() - 1;
     auto ix_glb_min = -orca_grid.haloWest();
-    auto ix_glb_max = ix_glb_min + orca_grid.nx() + orca_grid.haloEast();
+    auto ix_glb_max = orca_grid.nx() + orca_grid.haloEast() - 1;
+
+    // global (all processor) configuration information about ORCA grid for the ORCA mesh under construction
+    SurroundingRectangle::Configuration SR_cfg;
+    SR_cfg.mypart     = mypart_;
+    SR_cfg.nparts     = nparts_;
+    SR_cfg.halosize   = halosize_;
+    SR_cfg.nx_glb     = orca_grid.nx();
+    SR_cfg.ny_glb     = orca_grid.ny();
+    SR_cfg.ix_glb_min = ix_glb_min;
+    SR_cfg.ix_glb_max = ix_glb_max;
+    SR_cfg.iy_glb_min = iy_glb_min;
+    SR_cfg.iy_glb_max = iy_glb_max;
+
+    SurroundingRectangle SR(distribution, SR_cfg);
+    LocalOrcaGrid local_orca(orca_grid, SR);
+
     // clone some grid properties
     setGrid( mesh, grid, distribution );
 
@@ -313,10 +318,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
         ATLAS_TRACE_SCOPE( "filling" )
         for( idx_t iy = 0; iy < local_orca.ny(); iy++ ) {
-            ATLAS_ASSERT( local_orca.iy_min() + iy < ny_orca_halo );
             for ( idx_t ix = 0; ix < local_orca.nx(); ix++ ) {
                 idx_t ii = local_orca.index( ix, iy );
-                ASSERT(ii < local_orca.is_node.size());
                 // node properties
                 if ( local_orca.is_node[ii] ) {
                     idx_t inode = node_index[ii];
@@ -337,16 +340,16 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                       nodes.ij( inode, YY ) = ij_glb.j;
                     }
 
+                    const auto normalised_xy = local_orca.normalised_grid_xy( ix, iy );
+
                     // grid xy coordinates
                     {
-                      const auto xy = local_orca.grid_xy( ix, iy );
-                      nodes.xy( inode, LON ) = xy.x();
-                      nodes.xy( inode, LAT ) = xy.y();
+                      nodes.xy( inode, LON ) = normalised_xy.x();
+                      nodes.xy( inode, LAT ) = normalised_xy.y();
                     }
 
                     // geographic coordinates (normalised)
                     {
-                      const auto normalised_xy = local_orca.normalised_grid_xy( ix, iy );
                       nodes.lonlat( inode, LON ) = normalised_xy.x();
                       nodes.lonlat( inode, LAT ) = normalised_xy.y();
                     }
@@ -354,13 +357,20 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     // part and remote_idx
                     nodes.part( inode )           = local_orca.parts[ii];
                     nodes.remote_idx( inode )     = inode;
-                    gidx_t master_idx             = local_orca.master_global_index( ix, iy );
-                    nodes.master_glb_idx( inode ) = master_idx + 1;
+                    nodes.master_glb_idx( inode ) = nodes.glb_idx( inode );
 
                     // flags
                     auto flags = nodes.flags( inode );
 
                     if ( nodes.ghost( inode ) ) {
+                      gidx_t master_idx             = local_orca.master_global_index( ix, iy );
+                      nodes.master_glb_idx( inode ) = master_idx + 1;
+                      if ( nparts_ == 1 ) {
+                        nodes.part( inode ) = 0;
+                      } else {                        
+                        PointIJ master_ij = local_orca.master_global_ij( ix, iy );
+                        nodes.part( inode ) = SR.clamped_partition( master_ij.i, master_ij.j );
+                      }
                       nodes.remote_idx( inode ) = serial_distribution ?
                           static_cast<int>( master_idx ) : -1;
                     }
@@ -580,7 +590,7 @@ void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
         else {
             ridx( jnode ) = jnode;
         }
-        if ( uid == 26575 ) {
+        if ( uid == 1 ) {
             std::cout << "[" << mypart << "] " << jnode << ", --, " << ij( jnode, XX ) << ", " << ij( jnode, YY )
                                                 << ", " << part( jnode )
                                                 << ", " << ghost( jnode )
