@@ -31,12 +31,12 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   iy_orca_min_ = rectangle.iy_min();
   iy_orca_max_ = rectangle.iy_max();
 
-  std::cout << " rectangle.nx() " << rectangle.nx()
-            << " rectangle.ny() " << rectangle.ny()
-            << " rectangle.ix_min() " << rectangle.ix_min()
-            << " rectangle.ix_max() " << rectangle.ix_max()
-            << " rectangle.iy_min() " << rectangle.iy_min()
-            << " rectangle.iy_max() " << rectangle.iy_max() << std::endl;
+//  std::cout << " rectangle.nx() " << rectangle.nx()
+//            << " rectangle.ny() " << rectangle.ny()
+//            << " rectangle.ix_min() " << rectangle.ix_min()
+//            << " rectangle.ix_max() " << rectangle.ix_max()
+//            << " rectangle.iy_min() " << rectangle.iy_min()
+//            << " rectangle.iy_max() " << rectangle.iy_max() << std::endl;
 
   // Ensure we include the orca halo points if we are at the edge of the orca grid.
   // Is this needed?
@@ -53,20 +53,20 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   //  iy_orca_max_ = orca_.ny() + orca_.haloNorth();
  // }
 
-  std::cout << " orca_.nx() " << orca_.nx()
-            << " orca_.ny() " << orca_.ny() << std::endl;
+//  std::cout << " orca_.nx() " << orca_.nx()
+//            << " orca_.ny() " << orca_.ny() << std::endl;
 
-  std::cout << " ix_orca_min_ " <<  ix_orca_min_
-            << " ix_orca_max_ " <<  ix_orca_max_
-            << " iy_orca_min_ " <<  iy_orca_min_
-            << " iy_orca_max_ " <<  iy_orca_max_ << std::endl;
+//  std::cout << " ix_orca_min_ " <<  ix_orca_min_
+//            << " ix_orca_max_ " <<  ix_orca_max_
+//            << " iy_orca_min_ " <<  iy_orca_min_
+//            << " iy_orca_max_ " <<  iy_orca_max_ << std::endl;
 
   // dimensions of the rectangle including the ORCA halo points
   // NOTE: +1 because the size of the dimension is one bigger than index of the last element
   nx_orca_ = ix_orca_max_ - ix_orca_min_ + 1;
   ny_orca_ = iy_orca_max_ - iy_orca_min_ + 1;
   size_ = nx_orca_ * ny_orca_;
-  std::cout << "nx_orca_ " << nx_orca_ << " ny_orca_ " << ny_orca_ << " size_ " << size_ << std::endl;
+//  std::cout << "nx_orca_ " << nx_orca_ << " ny_orca_ " << ny_orca_ << " size_ " << size_ << std::endl;
 
   // partitions and local indices in surrounding rectangle
   parts.resize( size_, -1 );

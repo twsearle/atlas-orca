@@ -194,12 +194,12 @@ CASE("test surrounding rectangle ") {
                   << " number on this partition " << total_on_partition
                   << " number not on partition " << not_on_partition << std::endl;
 
-        output::Gmsh gmsh(std::string("surroundingRect") +
-                              std::to_string(cfg.nparts) + "_" + gridname + "_" +
-                              distributionName + "_" + std::to_string(halo) +
-                              ".msh",
-                          Config("coordinates", "xy") | Config("info", true));
-        gmsh.write(regular_mesh);
+        //output::Gmsh gmsh(std::string("surroundingRect") +
+        //                      std::to_string(cfg.nparts) + "_" + gridname + "_" +
+        //                      distributionName + "_" + std::to_string(halo) +
+        //                      ".msh",
+        //                  Config("coordinates", "xy") | Config("info", true));
+        //gmsh.write(regular_mesh);
       }
 
       std::cout << "(iy_min, iy_max) (" << rectangle.iy_min() << ", " << rectangle.iy_max() << ") "
