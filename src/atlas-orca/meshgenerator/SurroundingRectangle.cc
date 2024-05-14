@@ -99,7 +99,7 @@ int SurroundingRectangle::global_partition( idx_t ix_glb, idx_t iy_glb ) const {
   return distribution_.partition( iy_glb_p * cfg_.nx_glb + ix_glb_p );
 }
 
-int SurroundingRectangle::clamped_partition( idx_t ix_glb, idx_t iy_glb ) const {
+int SurroundingRectangle::clamped_global_partition( idx_t ix_glb, idx_t iy_glb ) const {
    auto clamp = []( idx_t value, idx_t lower, idx_t upper ) {
        // in C++17 this is std::clamp
        return std::max( lower, std::min( value, upper ) );
@@ -139,7 +139,7 @@ SurroundingRectangle::SurroundingRectangle(
       int nb_real_nodes_owned_by_rectangle_TP = 0;
       atlas_omp_for( idx_t iy_glb = cfg_.iy_glb_min; iy_glb <= cfg_.iy_glb_max; iy_glb++ ) {
         for ( idx_t ix_glb = cfg_.ix_glb_min; ix_glb <= cfg_.ix_glb_max; ix_glb++ ) {
-          int p = clamped_partition( ix_glb, iy_glb );
+          int p = clamped_global_partition( ix_glb, iy_glb );
           if ( p == cfg_.mypart ) {
             ix_min_TP = std::min<idx_t>( ix_min_TP, ix_glb );
             ix_max_TP = std::max<idx_t>( ix_max_TP, ix_glb );
@@ -207,7 +207,7 @@ SurroundingRectangle::SurroundingRectangle(
       for ( idx_t ix = 0; ix < nx_; ix++ ) {
         idx_t ii       = index( ix, iy );
         idx_t ix_glb = ix_min_ + ix;
-        parts.at( ii ) = clamped_partition( ix_glb, iy_glb );
+        parts.at( ii ) = clamped_global_partition( ix_glb, iy_glb );
         bool halo_found = false;
         int halo_dist = cfg_.halosize;
         if ((cfg_.halosize > 0) && parts.at( ii ) != cfg_.mypart ) {

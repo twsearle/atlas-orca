@@ -369,7 +369,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                         nodes.part( inode ) = 0;
                       } else {                        
                         PointIJ master_ij = local_orca.master_global_ij( ix, iy );
-                        nodes.part( inode ) = SR.clamped_partition( master_ij.i, master_ij.j );
+                        nodes.part( inode ) = SR.clamped_global_partition( master_ij.i, master_ij.j );
                       }
                       nodes.remote_idx( inode ) = serial_distribution ?
                           static_cast<int>( master_idx ) : -1;

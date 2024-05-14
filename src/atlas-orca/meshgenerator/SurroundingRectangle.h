@@ -74,7 +74,7 @@ class SurroundingRectangle {
     int index( int i, int j ) const;
     int partition( idx_t i, idx_t j ) const;
     int global_partition( idx_t ix_glb, idx_t iy_glb ) const;
-    int clamped_partition( idx_t ix_glb, idx_t iy_glb ) const;
+    int clamped_global_partition( idx_t ix_glb, idx_t iy_glb ) const;
     std::vector<int> parts;
     std::vector<int> halo;
     std::vector<int> is_ghost;
