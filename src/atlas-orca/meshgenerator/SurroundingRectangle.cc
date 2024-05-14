@@ -206,7 +206,7 @@ SurroundingRectangle::SurroundingRectangle(
     //atlas_omp_parallel_for( idx_t iy = 0; iy < ny_; iy++ )
     for( idx_t iy = 0; iy < ny_; iy++ ) {
       for ( idx_t ix = 0; ix < nx_; ix++ ) {
-        idx_t ii       = index( ix, iy );
+        idx_t ii = index( ix, iy );
         parts.at( ii ) = partition( ix, iy );
         bool halo_found = false;
         int halo_dist = cfg_.halosize;

@@ -154,14 +154,6 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     ATLAS_ASSERT( orca_grid );
     ATLAS_ASSERT( !mesh.generated() );
 
-    // global orca grid dimensions and index limits
-    auto ny_orca_halo = orca_grid.ny() + orca_grid.haloNorth() + orca_grid.haloSouth();
-    auto nx_orca_halo = orca_grid.nx() + orca_grid.haloEast() + orca_grid.haloWest();
-    auto iy_glb_min = -orca_grid.haloSouth();
-    auto iy_glb_max = orca_grid.ny() + orca_grid.haloNorth() - 1;
-    auto ix_glb_min = -orca_grid.haloWest();
-    auto ix_glb_max = orca_grid.nx() + orca_grid.haloEast() - 1;
-
     // global (all processor) configuration information about ORCA grid for the ORCA mesh under construction
     SurroundingRectangle::Configuration SR_cfg;
     SR_cfg.mypart     = mypart_;
@@ -169,13 +161,17 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     SR_cfg.halosize   = halosize_;
     SR_cfg.nx_glb     = orca_grid.nx();
     SR_cfg.ny_glb     = orca_grid.ny();
-    SR_cfg.ix_glb_min = ix_glb_min;
-    SR_cfg.ix_glb_max = ix_glb_max;
-    SR_cfg.iy_glb_min = iy_glb_min;
-    SR_cfg.iy_glb_max = iy_glb_max;
 
     SurroundingRectangle SR(distribution, SR_cfg);
     LocalOrcaGrid local_orca(orca_grid, SR);
+
+    // global orca grid dimensions and index limits
+    auto ny_orca_halo = orca_grid.ny() + orca_grid.haloNorth() + orca_grid.haloSouth();
+    auto nx_orca_halo = orca_grid.nx() + orca_grid.haloEast() + orca_grid.haloWest();
+    auto iy_glb_min = -orca_grid.haloSouth();
+    auto iy_glb_max = orca_grid.ny() + orca_grid.haloNorth() - 1;
+    auto ix_glb_min = -orca_grid.haloWest();
+    auto ix_glb_max = orca_grid.nx() + orca_grid.haloEast() - 1;
 
     // clone some grid properties
     setGrid( mesh, grid, distribution );

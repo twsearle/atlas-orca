@@ -72,21 +72,12 @@ CASE("test surrounding rectangle ") {
       StructuredGrid regular_grid{xspace, yspace};
       auto distribution = grid::Distribution(regular_grid, partitioner);
 
-      auto iy_glb_min = -grid.haloSouth();
-      auto iy_glb_max = grid.ny() + grid.haloNorth() - 1;
-      auto ix_glb_min = -grid.haloWest();
-      auto ix_glb_max = grid.nx() + grid.haloEast() - 1;
-
       orca::meshgenerator::SurroundingRectangle::Configuration cfg;
       cfg.mypart = mpi::rank();
       cfg.nparts = mpi::size();
       cfg.halosize = halo;
       cfg.nx_glb = grid.nx();
       cfg.ny_glb = grid.ny();
-      cfg.ix_glb_min = ix_glb_min;
-      cfg.ix_glb_max = ix_glb_max;
-      cfg.iy_glb_min = iy_glb_min;
-      cfg.iy_glb_max = iy_glb_max;
       std::cout << "[" << cfg.mypart << "] " << regular_grid.type() << std::endl;
 
       const idx_t cell_width = 1;

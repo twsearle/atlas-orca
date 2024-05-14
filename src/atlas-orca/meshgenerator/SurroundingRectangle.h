@@ -47,10 +47,6 @@ class SurroundingRectangle {
         int halosize;
         int nx_glb;
         int ny_glb;
-        int ix_glb_min;
-        int ix_glb_max;
-        int iy_glb_min;
-        int iy_glb_max;
         Configuration() :
             nparts(std::numeric_limits<int>::lowest())
             , mypart(std::numeric_limits<int>::lowest())

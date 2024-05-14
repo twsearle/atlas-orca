@@ -80,10 +80,6 @@ CASE("test surrounding local_orca ") {
       cfg.halosize = halo;
       cfg.nx_glb = grid.nx();
       cfg.ny_glb = grid.ny();
-      cfg.ix_glb_min = -grid.haloWest();
-      cfg.ix_glb_max = grid.nx() + grid.haloEast();
-      cfg.iy_glb_min = -grid.haloSouth();
-      cfg.iy_glb_max = grid.ny() + grid.haloNorth();
       orca::meshgenerator::SurroundingRectangle rectangle(distribution, cfg);
       std::cout << "[" << cfg.mypart << "] rectangle.ix_min " <<  rectangle.ix_min()
                 << " rectangle.ix_max " <<  rectangle.ix_max()

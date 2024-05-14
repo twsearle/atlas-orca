@@ -39,19 +39,18 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 //            << " rectangle.iy_max() " << rectangle.iy_max() << std::endl;
 
   // Ensure we include the orca halo points if we are at the edge of the orca grid.
-  // Is this needed?
-  //if (rectangle.ix_min() <= 0) {
-  //  ix_orca_min_ = -orca_.haloWest();
- // }
-  //if (rectangle.ix_max() >= orca_.nx() - 1) {
-  //  ix_orca_max_ = orca_.nx() + orca_.haloEast();
-  //}
-  //if (rectangle.iy_min() <= 0) {
-  //  iy_orca_min_ = -orca_.haloSouth();
- // }
-  //if (rectangle.iy_max() >= orca_.ny() - 1) {
-  //  iy_orca_max_ = orca_.ny() + orca_.haloNorth();
- // }
+  if (rectangle.ix_min() <= 0) {
+    ix_orca_min_ = -orca_.haloWest();
+  }
+  if (rectangle.ix_max() >= orca_.nx() - 1) {
+    ix_orca_max_ = orca_.nx() + orca_.haloEast() - 1;
+  }
+  if (rectangle.iy_min() <= 0) {
+    iy_orca_min_ = -orca_.haloSouth();
+  }
+  if (rectangle.iy_max() >= orca_.ny() - 1) {
+    iy_orca_max_ = orca_.ny() + orca_.haloNorth() - 1;
+  }
 
 //  std::cout << " orca_.nx() " << orca_.nx()
 //            << " orca_.ny() " << orca_.ny() << std::endl;
@@ -81,26 +80,25 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
     for( size_t iy = 0; iy < ny_orca_; iy++ ) {
       for ( size_t ix = 0; ix < nx_orca_; ix++ ) {
         idx_t ii = index( ix, iy );
-        idx_t reg_ii = 0;
-        // TODO: Use one of our orca grid periodic things to inform rectangle index?
-        //idx_t ix_reg = ix - orca_.haloWest();
-        //idx_t iy_reg = iy - orca_.haloSouth();
-        //if (ix_reg < 0) {
-        //  ix_reg = 0;
-        //} else if (ix_reg >= rectangle.nx()) {
-        //  ix_reg = rectangle.nx() - 1;
-        //}
-        //if (iy_reg < 0) {
-        //  iy_reg = 0;
-        //} else if (iy_reg >= rectangle.ny()) {
-        //  iy_reg = rectangle.ny() - 1;
-       // }
-        reg_ii = rectangle.index(ix, iy);
+        const auto ij_glb_haloed = this->global_ij( ix, iy );
+        idx_t ix_reg = ij_glb_haloed.i;
+        idx_t iy_reg = ij_glb_haloed.j;
+        if (ix_reg < 0) {
+          ix_reg = 0;
+        } else if (ix_reg >= rectangle.nx()) {
+          ix_reg = rectangle.nx() - 1;
+        }
+        if (iy_reg < 0) {
+          iy_reg = 0;
+        } else if (iy_reg >= rectangle.ny()) {
+          iy_reg = rectangle.ny() - 1;
+        }
+        idx_t reg_ii = rectangle.index(ix_reg, iy_reg);
         ASSERT(reg_ii < rectangle.parts.size());
         ASSERT(reg_ii < rectangle.halo.size());
         ASSERT(reg_ii < rectangle.is_ghost.size());
-        parts.at( ii )    = rectangle.parts.at( reg_ii );
-        halo.at( ii )     = rectangle.halo.at( reg_ii );
+        parts.at( ii ) = rectangle.parts.at( reg_ii );
+        halo.at( ii ) = rectangle.halo.at( reg_ii );
         //const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
         //if ( ij_glb.j < orca_.ny() + orca_.haloNorth() ) {
             is_ghost.at( ii ) = rectangle.is_ghost.at( reg_ii );
@@ -165,22 +163,6 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
           is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb_haloed.i, ij_glb_haloed.j );
         }
       }
-//      const auto ij_glb_haloed = this->orca_haloed_global_grid_ij( ix, iy );
-//      if ( (ij_glb_haloed.j >= 0) || (ij_glb_haloed.i < 0) || (ij_glb_haloed.i >= orca_.nx()) ) {
-//        is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb_haloed.i, ij_glb_haloed.j );
-//      }
-//      if ( is_ghost_including_orca_halo.at( ii ) != 0 ) {
-//        const auto ij_glb = this->master_global_ij( ix, iy );
-//        const auto master_idx = this->master_global_index( ix, iy );
-//        parts.at(ii) = rectangle.global_partition(ij_glb.i, ij_glb.j);
-//        std::cout << "-- " << ii << ", " << ij_glb.i << ", " << ij_glb.j
-//                                 << ", " << parts.at( ii )
-//                                 << ", " << is_ghost.at( ii )
-//                                 << ", " << is_ghost_including_orca_halo.at( ii )
-//                                 << ", --, --"
-//
-//                                 << ", " << master_idx << std::endl;
-//    }
     }
   }
 
