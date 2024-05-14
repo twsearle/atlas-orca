@@ -161,7 +161,14 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
       }
       if ( is_ghost_including_orca_halo.at( ii ) != 0 ) {
         const auto ij_glb = this->master_global_ij( ix, iy );
+        const auto master_idx = this->master_global_index( ix, iy );
         parts.at(ii) = rectangle.global_partition(ij_glb.i, ij_glb.j);
+        std::cout << "-- " << ii << ", " << ij_glb.i << ", " << ij_glb.j
+                                 << ", " << parts.at( ii )
+                                 << ", " << is_ghost.at( ii )
+                                 << ", " << is_ghost_including_orca_halo.at( ii )
+                                 << ", --, --"
+                                 << ", " << master_idx << std::endl;
       }
     }
   }
