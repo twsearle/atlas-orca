@@ -161,7 +161,7 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         const auto ij_glb_haloed = this->global_ij( ix, iy );
         // The southern boundary does not contain halo points apart from at the
         // east and west limits.
-        if ( ij_glb_haloed.j >= 0 or ij_glb_haloed.i < 0 or ij_glb_haloed.i >= orca_.nx()) {
+        if ( ij_glb_haloed.j >= 0 || ij_glb_haloed.i < 0 || ij_glb_haloed.i >= orca_.nx()) {
           is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb_haloed.i, ij_glb_haloed.j );
         }
     }
