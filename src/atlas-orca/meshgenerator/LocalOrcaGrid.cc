@@ -159,13 +159,11 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
       if ( is_node.at( ii ) ) {
         is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii ));
         const auto ij_glb_haloed = this->global_ij( ix, iy );
-        if ( ij_glb_haloed.j > 0 or ij_glb_haloed.i < 0 ) {
+        // The southern boundary does not contain halo points apart from at the
+        // east and west limits.
+        if ( ij_glb_haloed.j >= 0 or ij_glb_haloed.i < 0 or ij_glb_haloed.i >= orca_.nx()) {
           is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb_haloed.i, ij_glb_haloed.j );
         }
-      //if ( is_ghost_including_orca_halo.at( ii ) != 0 ) {
-      //  const auto ij_glb = this->master_global_ij( ix, iy );
-      //  parts.at(ii) = rectangle.global_partition(ij_glb.i, ij_glb.j);
-      }
     }
   }
 
