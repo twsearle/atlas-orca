@@ -83,16 +83,18 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         const auto ij_glb_haloed = this->global_ij( ix, iy );
         idx_t ix_reg = ij_glb_haloed.i;
         idx_t iy_reg = ij_glb_haloed.j;
-        if (ix_reg < 0) {
-          ix_reg = 0;
-        } else if (ix_reg >= rectangle.nx()) {
-          ix_reg = rectangle.nx() - 1;
+        if (ix_reg < rectangle.ix_min()) {
+          ix_reg = rectangle.ix_min();
+        } else if (ix_reg > rectangle.ix_max()) {
+          ix_reg = rectangle.ix_max();
         }
-        if (iy_reg < 0) {
-          iy_reg = 0;
-        } else if (iy_reg >= rectangle.ny()) {
-          iy_reg = rectangle.ny() - 1;
+        if (iy_reg < rectangle.iy_min()) {
+          iy_reg = rectangle.iy_min();
+        } else if (iy_reg >= rectangle.iy_max()) {
+          iy_reg = rectangle.iy_max();
         }
+        ix_reg -= rectangle.ix_min();
+        iy_reg -= rectangle.iy_min();
         idx_t reg_ii = rectangle.index(ix_reg, iy_reg);
         ASSERT(reg_ii < rectangle.parts.size());
         ASSERT(reg_ii < rectangle.halo.size());

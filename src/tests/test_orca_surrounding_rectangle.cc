@@ -197,42 +197,42 @@ CASE("test surrounding rectangle ") {
                 << "(ix_min, ix_max) (" << rectangle.ix_min() << ", " << rectangle.ix_max() << ") " << std::endl;
       if (cfg.nparts == 2) {
         if (cfg.mypart == 0) {
-          EXPECT(rectangle.iy_min() == -1);
-          EXPECT(rectangle.iy_max() == grid.ny());
-          EXPECT(rectangle.ix_min() == -1);
-          EXPECT(rectangle.ix_max() == 89 + cell_width + halo);
+          EXPECT(rectangle.iy_min() == 0);
+          EXPECT(rectangle.iy_max() == 147);
+          EXPECT(rectangle.ix_min() == 0);
+          EXPECT(rectangle.ix_max() == 90);
         }
         if (cfg.mypart == 1) {
-          EXPECT(rectangle.iy_min() == -1);
-          EXPECT(rectangle.iy_max() == grid.ny());
-          EXPECT(rectangle.ix_min() == 90 - halo);
-          EXPECT(rectangle.ix_max() == grid.nx());
+          EXPECT(rectangle.iy_min() == 0);
+          EXPECT(rectangle.iy_max() == 147);
+          EXPECT(rectangle.ix_min() == 90);
+          EXPECT(rectangle.ix_max() == 180);
         }
       }
       if (cfg.nparts == 4) {
         if (cfg.mypart == 0) {
-          EXPECT(rectangle.iy_min() == -1);
-          EXPECT(rectangle.iy_max() == 73 + cell_width + halo);
-          EXPECT(rectangle.ix_min() == -1);
-          EXPECT(rectangle.ix_max() == 89 + cell_width + halo);
+          EXPECT(rectangle.iy_min() == 0);
+          EXPECT(rectangle.iy_max() == 74);
+          EXPECT(rectangle.ix_min() == 0);
+          EXPECT(rectangle.ix_max() == 90);
         }
         if (cfg.mypart == 1) {
-          EXPECT(rectangle.iy_min() == -1);
-          EXPECT(rectangle.iy_max() == 73 + cell_width + halo);
-          EXPECT(rectangle.ix_min() == 89 - halo);
-          EXPECT(rectangle.ix_max() == grid.nx());
+          EXPECT(rectangle.iy_min() == 0);
+          EXPECT(rectangle.iy_max() == 74);
+          EXPECT(rectangle.ix_min() == 89);
+          EXPECT(rectangle.ix_max() == 180);
         }
         if (cfg.mypart == 2) {
-          EXPECT(rectangle.iy_min() == 73 - halo);
-          EXPECT(rectangle.iy_max() == grid.ny());
-          EXPECT(rectangle.ix_min() == -1);
-          EXPECT(rectangle.ix_max() == 90 + cell_width + halo);
+          EXPECT(rectangle.iy_min() == 73);
+          EXPECT(rectangle.iy_max() == 147);
+          EXPECT(rectangle.ix_min() == 0);
+          EXPECT(rectangle.ix_max() == 91);
         }
         if (cfg.mypart == 3) {
-          EXPECT(rectangle.iy_min() == 73 - halo);
-          EXPECT(rectangle.iy_max() == grid.ny());
-          EXPECT(rectangle.ix_min() == 90 - halo);
-          EXPECT(rectangle.ix_max() == grid.nx());
+          EXPECT(rectangle.iy_min() == 73);
+          EXPECT(rectangle.iy_max() == 147);
+          EXPECT(rectangle.ix_min() == 90);
+          EXPECT(rectangle.ix_max() == 180);
         }
       }
     }

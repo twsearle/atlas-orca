@@ -156,11 +156,11 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     // global (all processor) configuration information about ORCA grid for the ORCA mesh under construction
     SurroundingRectangle::Configuration SR_cfg;
-    SR_cfg.mypart     = mypart_;
-    SR_cfg.nparts     = nparts_;
-    SR_cfg.halosize   = halosize_;
-    SR_cfg.nx_glb     = orca_grid.nx();
-    SR_cfg.ny_glb     = orca_grid.ny();
+    SR_cfg.mypart = mypart_;
+    SR_cfg.nparts = nparts_;
+    SR_cfg.halosize = halosize_;
+    SR_cfg.nx_glb = orca_grid.nx();
+    SR_cfg.ny_glb = orca_grid.ny();
 
     SurroundingRectangle SR(distribution, SR_cfg);
     LocalOrcaGrid local_orca(orca_grid, SR);
