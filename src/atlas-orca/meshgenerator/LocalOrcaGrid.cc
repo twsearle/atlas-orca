@@ -178,7 +178,9 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 //                                 << ", " << is_ghost.at( ii )
 //                                 << ", " << is_ghost_including_orca_halo.at( ii )
 //                                 << ", --, --"
+//
 //                                 << ", " << master_idx << std::endl;
+//    }
     }
   }
 
