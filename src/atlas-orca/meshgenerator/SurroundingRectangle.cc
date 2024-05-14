@@ -137,9 +137,11 @@ SurroundingRectangle::SurroundingRectangle(
       int iy_min_TP = iy_min_;
       int iy_max_TP = iy_max_;
       int nb_real_nodes_owned_by_rectangle_TP = 0;
-      atlas_omp_for( idx_t iy_glb = cfg_.iy_glb_min; iy_glb <= cfg_.iy_glb_max; iy_glb++ ) {
-        for ( idx_t ix_glb = cfg_.ix_glb_min; ix_glb <= cfg_.ix_glb_max; ix_glb++ ) {
-          int p = clamped_global_partition( ix_glb, iy_glb );
+      atlas_omp_for( idx_t iy_glb = 0; iy_glb < cfg_.ny_glb; iy_glb++ ) {
+        for ( idx_t ix_glb = 0; ix_glb < cfg_.nx_glb; ix_glb++ ) {
+          ATLAS_ASSERT_MSG(ix_glb < cfg_.nx_glb, std::string("ix_glb >= cfg_.nx_glb: ") + std::to_string(ix_glb) + " >= " + std::to_string(cfg_.nx_glb));
+          ATLAS_ASSERT_MSG(iy_glb < cfg_.ny_glb, std::string("iy_glb >= cfg_.ny_glb: ") + std::to_string(iy_glb) + " >= " + std::to_string(cfg_.ny_glb));
+          int p = global_partition( ix_glb, iy_glb );
           if ( p == cfg_.mypart ) {
             ix_min_TP = std::min<idx_t>( ix_min_TP, ix_glb );
             ix_max_TP = std::max<idx_t>( ix_max_TP, ix_glb );
@@ -178,8 +180,8 @@ SurroundingRectangle::SurroundingRectangle(
   }
 
   // +1 to surround the ghost nodes used to complete the cells
-  ix_max_ = std::min( cfg_.ix_glb_max, ix_max_ + 1 );
-  iy_max_ = std::min( cfg_.iy_glb_max, iy_max_ + 1 );
+  ix_max_ += 1;
+  iy_max_ += 1;
 
   // dimensions of the surrounding rectangle (+1 because the size of the dimension is one bigger than the index of the last element)
   nx_ = ix_max_ - ix_min_ + 1;
@@ -203,11 +205,9 @@ SurroundingRectangle::SurroundingRectangle(
     ATLAS_TRACE( "partition, is_ghost, halo" );
     //atlas_omp_parallel_for( idx_t iy = 0; iy < ny_; iy++ )
     for( idx_t iy = 0; iy < ny_; iy++ ) {
-      idx_t iy_glb = iy_min_ + iy;
       for ( idx_t ix = 0; ix < nx_; ix++ ) {
         idx_t ii       = index( ix, iy );
-        idx_t ix_glb = ix_min_ + ix;
-        parts.at( ii ) = clamped_global_partition( ix_glb, iy_glb );
+        parts.at( ii ) = partition( ix, iy );
         bool halo_found = false;
         int halo_dist = cfg_.halosize;
         if ((cfg_.halosize > 0) && parts.at( ii ) != cfg_.mypart ) {
