@@ -51,7 +51,7 @@ CASE( "test haloExchange " ) {
       "serial",
       "checkerboard",
       "equal_regions",
-      // "equal_area", // This is not a valid option. Should it be equal_bands?
+      // "equal_area",
     };
 
     auto rollup_plus = []( const double lon, const double lat ) {
