@@ -365,7 +365,13 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                         nodes.part( inode ) = 0;
                       } else {                        
                         PointIJ master_ij = local_orca.master_global_ij( ix, iy );
-                        nodes.part( inode ) = SR.clamped_global_partition( master_ij.i, master_ij.j );
+                        auto clamp = []( idx_t value, idx_t lower, idx_t upper ) {
+                          // in C++17 this is std::clamp
+                          return std::max( lower, std::min( value, upper ) );
+                        };
+                        idx_t clamped_i = clamp( master_ij.i, 0, SR_cfg.nx_glb - 1 );
+                        idx_t clamped_j = clamp( master_ij.j, 0, SR_cfg.ny_glb - 1 );
+                        nodes.part( inode ) = SR.global_partition( clamped_i, clamped_j );
                       }
                       nodes.remote_idx( inode ) = serial_distribution ?
                           static_cast<int>( master_idx ) : -1;

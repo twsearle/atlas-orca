@@ -99,16 +99,6 @@ int SurroundingRectangle::global_partition( idx_t ix_glb, idx_t iy_glb ) const {
   return distribution_.partition( iy_glb_p * cfg_.nx_glb + ix_glb_p );
 }
 
-int SurroundingRectangle::clamped_global_partition( idx_t ix_glb, idx_t iy_glb ) const {
-   auto clamp = []( idx_t value, idx_t lower, idx_t upper ) {
-       // in C++17 this is std::clamp
-       return std::max( lower, std::min( value, upper ) );
-   };
-   ix_glb = clamp( ix_glb, 0, cfg_.nx_glb - 1 );
-   iy_glb = clamp( iy_glb, 0, cfg_.ny_glb - 1 );
-   return distribution_.partition( iy_glb * cfg_.nx_glb + ix_glb );
-}
-
 SurroundingRectangle::SurroundingRectangle(
     const grid::Distribution& distribution,
     const Configuration& cfg )
