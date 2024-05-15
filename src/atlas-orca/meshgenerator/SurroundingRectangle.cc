@@ -106,9 +106,9 @@ SurroundingRectangle::SurroundingRectangle(
   ATLAS_TRACE();
   cfg_.check_consistency();
 
-  std::ofstream logFile(distribution.type() + "-"
-      + std::to_string(cfg_.halosize) + "_p"
-      + std::to_string(cfg_.mypart) + ".log");
+//  std::ofstream logFile(distribution.type() + "-"
+//      + std::to_string(cfg_.halosize) + "_p"
+//      + std::to_string(cfg_.mypart) + ".log");
 
   // determine rectangle (ix_min_:ix_max_) x (iy_min_:iy_max_) surrounding the nodes on this processor
   ix_min_         = cfg_.nx_glb;
@@ -148,7 +148,7 @@ SurroundingRectangle::SurroundingRectangle(
                   int p_halo = global_partition( ix_glb + dhx, iy_glb + dhy );
 
                   if ( p_halo == cfg_.mypart ) {
-                    if (ix_max_TP < ix_glb) logFile << "[" << cfg_.mypart << "] ix_max bumped by halo: hx " << ix_glb + dhx << " ix_glb " << ix_glb << " ix_max_TP " << ix_max_TP << std::endl;
+//                    if (ix_max_TP < ix_glb) logFile << "[" << cfg_.mypart << "] ix_max bumped by halo: hx " << ix_glb + dhx << " ix_glb " << ix_glb << " ix_max_TP " << ix_max_TP << std::endl;
                     iy_min_TP = std::min<idx_t>( iy_min_TP, iy_glb );
                     iy_max_TP = std::max<idx_t>( iy_max_TP, iy_glb );
                     return;
@@ -173,14 +173,14 @@ SurroundingRectangle::SurroundingRectangle(
   ix_max_ += 1;
   iy_max_ += 1;
 
-  // dimensions of the surrounding rectangle (+1 buecause the size of the dimension is one bigger than the index of the last element)
+  // dimensions of the surrounding rectangle (+1 because the size of the dimension is one bigger than the index of the last element)
   nx_ = ix_max_ - ix_min_ + 1;
   ny_ = iy_max_ - iy_min_ + 1;
 
-  logFile << "[" << cfg_.mypart << "] ix_min: "     << ix_min_ << std::endl;
-  logFile << "[" << cfg_.mypart << "] ix_max: "     << ix_max_ << std::endl;
-  logFile << "[" << cfg_.mypart << "] iy_min: "     << iy_min_ << std::endl;
-  logFile << "[" << cfg_.mypart << "] iy_max: "     << iy_max_ << std::endl;
+//  logFile << "[" << cfg_.mypart << "] ix_min: "     << ix_min_ << std::endl;
+//  logFile << "[" << cfg_.mypart << "] ix_max: "     << ix_max_ << std::endl;
+//  logFile << "[" << cfg_.mypart << "] iy_min: "     << iy_min_ << std::endl;
+//  logFile << "[" << cfg_.mypart << "] iy_max: "     << iy_max_ << std::endl;
 
   // upper estimate for number of nodes
   uint64_t size = ny_ * nx_;
@@ -196,7 +196,7 @@ SurroundingRectangle::SurroundingRectangle(
     //atlas_omp_parallel_for( idx_t iy = 0; iy < ny_; iy++ )
     for( idx_t iy = 0; iy < ny_; iy++ ) {
       for ( idx_t ix = 0; ix < nx_; ix++ ) {
-        idx_t ii         = index( ix, iy );
+        idx_t ii = index( ix, iy );
         parts.at( ii ) = partition( ix, iy );
         bool halo_found = false;
         int halo_dist = cfg_.halosize;
@@ -224,15 +224,15 @@ SurroundingRectangle::SurroundingRectangle(
       }
     }
   }
-  logFile << std::setw(5) << std::setfill('0');
-  logFile << "[" << cfg_.mypart << "] nx                      = " << nx_ << std::endl;
-  logFile << "[" << cfg_.mypart << "] ny                      = " << ny_ << std::endl;
-  logFile << "[" << cfg_.mypart << "] halosize                = " << cfg_.halosize << std::endl;
-  logFile << "[" << cfg_.mypart << "] ny * nx_                = " << ny_ * nx_ << std::endl;
-  logFile << "[" << cfg_.mypart << "] ny * (nx_ + 2*halosize) = " << ny_ * (nx_ + 2*cfg_.halosize) << std::endl;
-  logFile << "[" << cfg_.mypart << "] nb_real_nodes_owned_by_rectangle = " << nb_real_nodes_owned_by_rectangle << std::endl;
-  logFile << "[" << cfg_.mypart << "] end of SR output" << std::endl;
-  logFile.close();
+//  logFile << std::setw(5) << std::setfill('0');
+//  logFile << "[" << cfg_.mypart << "] nx                      = " << nx_ << std::endl;
+//  logFile << "[" << cfg_.mypart << "] ny                      = " << ny_ << std::endl;
+//  logFile << "[" << cfg_.mypart << "] halosize                = " << cfg_.halosize << std::endl;
+//  logFile << "[" << cfg_.mypart << "] ny * nx_                = " << ny_ * nx_ << std::endl;
+//  logFile << "[" << cfg_.mypart << "] ny * (nx_ + 2*halosize) = " << ny_ * (nx_ + 2*cfg_.halosize) << std::endl;
+//  logFile << "[" << cfg_.mypart << "] nb_real_nodes_owned_by_rectangle = " << nb_real_nodes_owned_by_rectangle << std::endl;
+//  logFile << "[" << cfg_.mypart << "] end of SR output" << std::endl;
+//  logFile.close();
 }
 
 }  // namespace atlas::orca::meshgenerator 

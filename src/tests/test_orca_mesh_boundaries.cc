@@ -41,16 +41,16 @@ namespace test {
 CASE( "test haloExchange " ) {
     auto gridnames = std::vector<std::string>{
         "ORCA2_T",   //
-//        "ORCA2_U",   //
-//        "ORCA2_V",   //
-//        "eORCA1_T",  //
-//        "eORCA025_T",  //
-//        "eORCA12_T",  //
+        "ORCA2_U",   //
+        "ORCA2_V",   //
+        "eORCA1_T",  //
+        "eORCA025_T",  //
+        "eORCA12_T",  //
     };
     auto distributionNames = std::vector<std::string>{
       "serial",
       "checkerboard",
-      // "equal_regions",
+      "equal_regions",
       // "equal_area",
     };
 
@@ -140,12 +140,12 @@ CASE( "test haloExchange " ) {
                         Log::info() << "count nonzero and norm of differences is: " << std::sqrt(sumSquares) << std::endl;
                         Log::info() << "count nonzero halo points: " << halocount << std::endl;
                         Log::info() << "To diagnose problem, uncomment mesh writing here: " << Here() << std::endl;
-                        output::Gmsh gmsh(
-                            std::string("haloExchange_")+gridname+"_"+distributionName+"_"+std::to_string(halo)+".msh",
-                            Config("coordinates","ij")|Config("info",true));
-                        gmsh.write(mesh);
-                        gmsh.write(field);
-                        gmsh.write(field2);
+                        //output::Gmsh gmsh(
+                        //    std::string("haloExchange_")+gridname+"_"+distributionName+"_"+std::to_string(halo)+".msh",
+                        //    Config("coordinates","ij")|Config("info",true));
+                        //gmsh.write(mesh);
+                        //gmsh.write(field);
+                        //gmsh.write(field2);
                     //}
                     EXPECT_EQ( count, 0 );
                 }
