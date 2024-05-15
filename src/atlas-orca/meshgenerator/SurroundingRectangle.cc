@@ -44,7 +44,6 @@ int wrap( idx_t value, idx_t lower, idx_t upper ) {
 }
 }  // namespace
 
-
 PointIJ SurroundingRectangle::global_periodic_ij(idx_t ix_glb, idx_t iy_glb) const {
   // wrap around coordinate system when out of bounds on the global rectangle
 
@@ -57,11 +56,11 @@ PointIJ SurroundingRectangle::global_periodic_ij(idx_t ix_glb, idx_t iy_glb) con
 
   // j index north/south boundaries
   if (iy_glb_p > iy_glb_max) {
-    ix_glb_p = ix_glb_p + width_x/2;
+    ix_glb_p = width_x - ix_glb_p;
     iy_glb_p = 2*iy_glb_max - iy_glb_p;
   }
   if (iy_glb_p < 0) {
-    ix_glb_p = ix_glb_p + width_x/2;
+    ix_glb_p = width_x - ix_glb_p;
     iy_glb_p = -iy_glb_p;
   }
 
@@ -138,24 +137,6 @@ SurroundingRectangle::SurroundingRectangle(
             iy_min_TP = std::min<idx_t>( iy_min_TP, iy_glb );
             iy_max_TP = std::max<idx_t>( iy_max_TP, iy_glb );
             nb_real_nodes_owned_by_rectangle_TP++;
-          } else if (cfg_.halosize > 0) {
-            // use lambda to break from both loops at once
-            [&] {
-              for (idx_t dhx = -cfg_.halosize; dhx < cfg_.halosize + 1; ++dhx) {
-                for (idx_t dhy = -cfg_.halosize; dhy < cfg_.halosize + 1; ++dhy) {
-                  if ((dhy == 0 && dhx == 0))
-                    continue;
-                  int p_halo = global_partition( ix_glb + dhx, iy_glb + dhy );
-
-                  if ( p_halo == cfg_.mypart ) {
-//                    if (ix_max_TP < ix_glb) logFile << "[" << cfg_.mypart << "] ix_max bumped by halo: hx " << ix_glb + dhx << " ix_glb " << ix_glb << " ix_max_TP " << ix_max_TP << std::endl;
-                    iy_min_TP = std::min<idx_t>( iy_min_TP, iy_glb );
-                    iy_max_TP = std::max<idx_t>( iy_max_TP, iy_glb );
-                    return;
-                  }
-                }
-              }
-            }();
           }
         }
       }
@@ -168,6 +149,12 @@ SurroundingRectangle::SurroundingRectangle(
       }
     }
   }
+
+  // add the halo.
+  ix_min_ -= cfg_.halosize;
+  ix_max_ += cfg_.halosize;
+  iy_min_ -= cfg_.halosize;
+  iy_max_ += cfg_.halosize;
 
   // +1 to surround the ghost nodes used to complete the cells
   ix_max_ += 1;
@@ -219,7 +206,6 @@ SurroundingRectangle::SurroundingRectangle(
             halo.at( ii ) = halo_dist;
           }
         }
-
         is_ghost.at( ii ) = ( parts.at( ii ) != cfg_.mypart );
       }
     }

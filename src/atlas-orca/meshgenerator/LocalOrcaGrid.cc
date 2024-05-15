@@ -40,16 +40,16 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 
   // Ensure we include the orca halo points if we are at the edge of the orca grid.
   if (rectangle.ix_min() <= 0) {
-    ix_orca_min_ = -orca_.haloWest();
+    ix_orca_min_ = std::min(rectangle.ix_min(), -orca_.haloWest());
   }
   if (rectangle.ix_max() >= orca_.nx() - 1) {
-    ix_orca_max_ = orca_.nx() + orca_.haloEast() - 1;
+    ix_orca_max_ = std::max(rectangle.ix_max(), orca_.nx() + orca_.haloEast() - 1);
   }
   if (rectangle.iy_min() <= 0) {
-    iy_orca_min_ = -orca_.haloSouth();
+    iy_orca_min_ = std::min(rectangle.iy_min(), -orca_.haloSouth());
   }
   if (rectangle.iy_max() >= orca_.ny() - 1) {
-    iy_orca_max_ = orca_.ny() + orca_.haloNorth() - 1;
+    iy_orca_max_ = std::max(rectangle.iy_max(), orca_.ny() + orca_.haloNorth() - 1);
   }
 
 //  std::cout << " orca_.nx() " << orca_.nx()
@@ -83,6 +83,7 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         const auto ij_glb_haloed = this->global_ij( ix, iy );
         idx_t ix_reg = ij_glb_haloed.i;
         idx_t iy_reg = ij_glb_haloed.j;
+        
         if (ix_reg < rectangle.ix_min()) {
           ix_reg = rectangle.ix_min();
         } else if (ix_reg > rectangle.ix_max()) {
