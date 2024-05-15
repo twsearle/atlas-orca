@@ -83,31 +83,37 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         const auto ij_glb_haloed = this->global_ij( ix, iy );
         idx_t ix_reg = ij_glb_haloed.i;
         idx_t iy_reg = ij_glb_haloed.j;
-        
-        if (ix_reg < rectangle.ix_min()) {
-          ix_reg = rectangle.ix_min();
-        } else if (ix_reg > rectangle.ix_max()) {
-          ix_reg = rectangle.ix_max();
+        idx_t reg_ii = -1;
+        // Are we in the ORCA halo? If so we use those points instead of wrapping to the
+        // other side of the grid.
+          // Find the information for the closest node to the ORCA halo point
+          // that is inside the grid.
+          idx_t ix_reg_h = ix_reg;
+          idx_t iy_reg_h = iy_reg;
+          if ( ix_reg < 0 ) {
+            ix_reg_h = 0;
+          } else if ( ix_reg >= orca.nx() ) {
+            ix_reg_h = orca.nx() - 1;
+          }
+          if ( iy_reg < 0 ) {
+            iy_reg_h = 0;
+          } else if ( iy_reg >= orca.ny() ) {
+            iy_reg_h = orca.ny() - 1;
+          }
+          ix_reg_h -= rectangle.ix_min();
+          iy_reg_h -= rectangle.iy_min();
+          idx_t reg_ii_h = rectangle.index(ix_reg_h, iy_reg_h);
+          reg_ii = reg_ii_h;
+        } else {
+          reg_ii = rectangle.index(ix_reg, iy_reg);
         }
-        if (iy_reg < rectangle.iy_min()) {
-          iy_reg = rectangle.iy_min();
-        } else if (iy_reg >= rectangle.iy_max()) {
-          iy_reg = rectangle.iy_max();
-        }
-        ix_reg -= rectangle.ix_min();
-        iy_reg -= rectangle.iy_min();
-        idx_t reg_ii = rectangle.index(ix_reg, iy_reg);
+        ASSERT(reg_ii >= 0);
         ASSERT(reg_ii < rectangle.parts.size());
         ASSERT(reg_ii < rectangle.halo.size());
         ASSERT(reg_ii < rectangle.is_ghost.size());
         parts.at( ii ) = rectangle.parts.at( reg_ii );
         halo.at( ii ) = rectangle.halo.at( reg_ii );
-        //const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
-        //if ( ij_glb.j < orca_.ny() + orca_.haloNorth() ) {
-            is_ghost.at( ii ) = rectangle.is_ghost.at( reg_ii );
-        //} else {
-        //    is_ghost.at( ii ) = 1;
-        //}
+        is_ghost.at( ii ) = rectangle.is_ghost.at( reg_ii );
       }
     }
   }
@@ -338,5 +344,15 @@ void LocalOrcaGrid::flags( idx_t ix, idx_t iy, util::detail::BitflagsView<int>& 
 bool LocalOrcaGrid::water( idx_t ix, idx_t iy ) const {
   const auto ij_glb = this->global_ij( ix, iy );
   return orca_.water( ij_glb.i, ij_glb.j );
+}
+bool LocalOrcaGrid::orca_halo( idx_t ix, idx_t iy ) const {
+  const auto ij_glb = this->global_ij( ix, iy );
+  if ( ((ij_glb.i < 0) && (ij_glb.i >= -orca_.haloEast())) ||
+       ((ij_glb.i >= orca_.nx()) && (ij_glb.i < (orca_.nx() + orca_.haloWest()))) ||
+       ((ij_glb.j < 0) && (ij_glb.j >= -orca_.haloSouth())) ||
+       ((ij_glb.j >= orca_.ny()) && (ij_glb.j < (orca_.ny() + orca_.haloNorth()))) ) {
+    return true;
+  }
+  return false;
 }
 }  // namespace atlas::orca::meshgenerator
