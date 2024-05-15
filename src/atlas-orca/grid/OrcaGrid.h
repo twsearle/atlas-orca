@@ -14,6 +14,7 @@
 
 #include "Orca.h"
 #include "atlas/grid/Grid.h"
+#include "atlas-orca/util/PointIJ.h"
 
 
 namespace atlas {
@@ -53,6 +54,7 @@ public:
     int haloSouth() const { return grid_->haloSouth(); }
 
     gidx_t periodicIndex( idx_t i, idx_t j ) const { return grid_->periodicIndex( i, j ); }
+    PointIJ PeriodicIJ( idx_t i, idx_t j ) const { return grid_->PeriodicIJ( idx_t i, idx_t j ); }
 
     void index2ij( gidx_t gidx, idx_t& i, idx_t& j ) const { grid_->index2ij( gidx, i, j ); }
 

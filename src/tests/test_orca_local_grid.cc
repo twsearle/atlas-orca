@@ -61,7 +61,7 @@ CASE("test surrounding local_orca ") {
     return 1 + util::function::vortex_rollup(lon, lat, 0.0);
   };
 
-  for (int halo = 0; halo < 1; ++halo) {
+  for (int halo = 0; halo < 2; ++halo) {
     SECTION(gridname + "_" + distributionName + "_halo" + std::to_string(halo)) {
       auto grid = OrcaGrid(gridname);
       auto partitioner_config = Config();
