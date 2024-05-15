@@ -81,18 +81,16 @@ CASE("test surrounding rectangle ") {
       std::cout << "[" << cfg.mypart << "] " << regular_grid.type() << std::endl;
 
       const idx_t cell_width = 1;
-// Need to clarify these EXPECTs. Halo is not used until rectangle is defined below
-// so I do not know how this would be tested here.
-//      if (regular_grid.ny() + 2*halo != grid.ny()) {
-//        std::cout << regular_grid.ny() + 2*halo << " != " << grid.ny() << std::endl;
-//      }
-//      EXPECT(regular_grid.ny() + 2*halo == grid.ny());
-//      for (idx_t ix = 0; ix < grid.ny(); ++ix) {
-//        if (regular_grid.nx(ix) + 2*halo != grid.nx()) {
-//          std::cout << regular_grid.nx(ix) + 2*halo << " != " << grid.nx() << std::endl;
-//        }
-//        EXPECT(regular_grid.nx(ix) + 2*halo == grid.nx());
-//      }
+      if (regular_grid.ny() != grid.ny()) {
+        std::cout << regular_grid.ny() << " != " << grid.ny() << std::endl;
+      }
+      EXPECT(regular_grid.ny() == grid.ny());
+      for (idx_t ix = 0; ix < grid.ny(); ++ix) {
+        if (regular_grid.nx(ix) != grid.nx()) {
+          std::cout << regular_grid.nx(ix) << " != " << grid.nx() << std::endl;
+        }
+        EXPECT(regular_grid.nx(ix) == grid.nx());
+      }
       std::cout << " last index? " << regular_grid.index(grid.nx()-1, grid.ny()-1) << std::endl;
 
       orca::meshgenerator::SurroundingRectangle rectangle(distribution, cfg);

@@ -56,11 +56,11 @@ PointIJ SurroundingRectangle::global_periodic_ij(idx_t ix_glb, idx_t iy_glb) con
 
   // j index north/south boundaries
   if (iy_glb_p > iy_glb_max) {
-    ix_glb_p = width_x - ix_glb_p;
+    ix_glb_p = ix_glb_p + width_x/2;
     iy_glb_p = 2*iy_glb_max - iy_glb_p;
   }
   if (iy_glb_p < 0) {
-    ix_glb_p = width_x - ix_glb_p;
+    ix_glb_p = ix_glb_p + width_x/2;
     iy_glb_p = -iy_glb_p;
   }
 
@@ -164,10 +164,10 @@ SurroundingRectangle::SurroundingRectangle(
   nx_ = ix_max_ - ix_min_ + 1;
   ny_ = iy_max_ - iy_min_ + 1;
 
-//  logFile << "[" << cfg_.mypart << "] ix_min: "     << ix_min_ << std::endl;
-//  logFile << "[" << cfg_.mypart << "] ix_max: "     << ix_max_ << std::endl;
-//  logFile << "[" << cfg_.mypart << "] iy_min: "     << iy_min_ << std::endl;
-//  logFile << "[" << cfg_.mypart << "] iy_max: "     << iy_max_ << std::endl;
+  //std::cout << "[" << cfg_.mypart << "] ix_min: "     << ix_min_ << std::endl;
+  //std::cout << "[" << cfg_.mypart << "] ix_max: "     << ix_max_ << std::endl;
+  //std::cout << "[" << cfg_.mypart << "] iy_min: "     << iy_min_ << std::endl;
+  //std::cout << "[" << cfg_.mypart << "] iy_max: "     << iy_max_ << std::endl;
 
   // upper estimate for number of nodes
   uint64_t size = ny_ * nx_;

@@ -46,7 +46,7 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
     ix_orca_max_ = std::max(rectangle.ix_max(), orca_.nx() + orca_.haloEast() - 1);
   }
   if (rectangle.iy_min() <= 0) {
-    iy_orca_min_ = std::min(rectangle.iy_min(), -orca_.haloSouth());
+    iy_orca_min_ = -orca_.haloSouth();
   }
   if (rectangle.iy_max() >= orca_.ny() - 1) {
     iy_orca_max_ = std::max(rectangle.iy_max(), orca_.ny() + orca_.haloNorth() - 1);
@@ -86,26 +86,29 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         idx_t reg_ii = -1;
         // Are we in the ORCA halo? If so we use those points instead of wrapping to the
         // other side of the grid.
+        if ( this->orca_halo( ix, iy ) ) {
           // Find the information for the closest node to the ORCA halo point
           // that is inside the grid.
           idx_t ix_reg_h = ix_reg;
           idx_t iy_reg_h = iy_reg;
           if ( ix_reg < 0 ) {
             ix_reg_h = 0;
-          } else if ( ix_reg >= orca.nx() ) {
-            ix_reg_h = orca.nx() - 1;
+          } else if ( ix_reg >= orca_.nx() ) {
+            ix_reg_h = orca_.nx() - 1;
           }
           if ( iy_reg < 0 ) {
             iy_reg_h = 0;
-          } else if ( iy_reg >= orca.ny() ) {
-            iy_reg_h = orca.ny() - 1;
+          } else if ( iy_reg >= orca_.ny() ) {
+            iy_reg_h = orca_.ny() - 1;
           }
           ix_reg_h -= rectangle.ix_min();
           iy_reg_h -= rectangle.iy_min();
-          idx_t reg_ii_h = rectangle.index(ix_reg_h, iy_reg_h);
+          idx_t reg_ii_h = rectangle.index( ix_reg_h, iy_reg_h );
           reg_ii = reg_ii_h;
         } else {
-          reg_ii = rectangle.index(ix_reg, iy_reg);
+          ix_reg -= rectangle.ix_min();
+          iy_reg -= rectangle.iy_min();
+          reg_ii = rectangle.index( ix_reg, iy_reg );
         }
         ASSERT(reg_ii >= 0);
         ASSERT(reg_ii < rectangle.parts.size());
@@ -168,7 +171,10 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         const auto ij_glb_haloed = this->global_ij( ix, iy );
         // The southern boundary does not contain halo points apart from at the
         // east and west limits.
-        if ( (ij_glb_haloed.j >= 0) || (ij_glb_haloed.i < 0) || (ij_glb_haloed.i >= orca_.nx()) ) {
+        if ( this->orca_halo( ij_glb_haloed.i, ij_glb_haloed.j ) && 
+             ((ij_glb_haloed.j >= 0) || 
+              (ij_glb_haloed.i < 0) || 
+              (ij_glb_haloed.i >= orca_.nx())) ) {
           is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii )) || orca_.ghost( ij_glb_haloed.i, ij_glb_haloed.j );
         }
       }
@@ -220,7 +226,7 @@ PointXY LocalOrcaGrid::normalised_grid_xy( idx_t ix, idx_t iy ) const {
 // Note: right now need to add +1 to this to fill the field with corresponding name.
 gidx_t LocalOrcaGrid::master_global_index( idx_t ix, idx_t iy ) const {
   auto ij = this->global_ij(ix, iy);
-  return orca_.periodicIndex( ij.i, ij.j );
+ return orca_.periodicIndex( ij.i, ij.j );
 }
 
 PointIJ LocalOrcaGrid::master_global_ij( idx_t ix, idx_t iy ) const {
@@ -296,7 +302,7 @@ idx_t LocalOrcaGrid::orca_haloed_global_grid_index( idx_t ix, idx_t iy ) const {
 
 void LocalOrcaGrid::flags( idx_t ix, idx_t iy, util::detail::BitflagsView<int>& flag_view ) const {
   flag_view.reset();
-  const auto ij_glb = this->global_ij( ix, iy );
+  const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
   if ( this->is_ghost[this->index(ix, iy)] ) {
     flag_view.set( util::Topology::GHOST );
     if( this->orca_haloed_global_grid_index( ix, iy ) !=
@@ -342,7 +348,7 @@ void LocalOrcaGrid::flags( idx_t ix, idx_t iy, util::detail::BitflagsView<int>& 
   }
 }
 bool LocalOrcaGrid::water( idx_t ix, idx_t iy ) const {
-  const auto ij_glb = this->global_ij( ix, iy );
+  const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
   return orca_.water( ij_glb.i, ij_glb.j );
 }
 bool LocalOrcaGrid::orca_halo( idx_t ix, idx_t iy ) const {
