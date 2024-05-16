@@ -214,10 +214,8 @@ gidx_t LocalOrcaGrid::master_global_index( idx_t ix, idx_t iy ) const {
 }
 
 PointIJ LocalOrcaGrid::master_global_ij( idx_t ix, idx_t iy ) const {
-  const auto master_idx = this->master_global_index( ix, iy );
-  idx_t ix_glb_master, iy_glb_master;
-  orca_.index2ij( master_idx, ix_glb_master, iy_glb_master );
-  return PointIJ(ix_glb_master, iy_glb_master);
+  auto ij = this->global_ij(ix, iy);
+  return orca_.periodicIJ( ij.i, ij.j );
 }
 
 PointLonLat LocalOrcaGrid::normalised_grid_master_lonlat( idx_t ix, idx_t iy ) const {
