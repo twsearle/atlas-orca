@@ -40,16 +40,21 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 
   // Ensure we include the orca halo points if we are at the edge of the orca grid.
   if (rectangle.ix_min() <= 0) {
-    ix_orca_min_ = rectangle.ix_min() - orca_.haloWest();
+    ix_orca_min_ = -orca_.haloWest();
   }
   if (rectangle.ix_max() >= orca_.nx() - 1) {
-    ix_orca_max_ = rectangle.ix_max() + orca_.haloEast();
+    //ix_orca_max_ = rectangle.ix_max() + orca_.haloEast() - 1;
+    ix_orca_max_ = orca_.nx() + orca_.haloEast() - 1;
   }
+  // no halo at the Southern boundary of orca grid (closed boundary we think?)
   if (rectangle.iy_min() <= 0) {
-    iy_orca_min_ = rectangle.iy_min() - orca_.haloSouth();
+    iy_orca_min_ = -orca_.haloSouth();
   }
+  // } else {
+  //   iy_orca_min_ = rectangle.iy_min() - orca_.haloSouth() - 1;
+  // }
   if (rectangle.iy_max() >= orca_.ny() - 1) {
-    iy_orca_max_ = rectangle.iy_max() + orca_.haloNorth();
+    iy_orca_max_ = orca_.ny() + orca_.haloNorth() - 1;
   }
 
   std::cout << " orca_.nx() " << orca_.nx()
@@ -215,7 +220,8 @@ gidx_t LocalOrcaGrid::master_global_index( idx_t ix, idx_t iy ) const {
 
 PointIJ LocalOrcaGrid::master_global_ij( idx_t ix, idx_t iy ) const {
   auto ij = this->global_ij(ix, iy);
-  return orca_.periodicIJ( ij.i, ij.j );
+  auto glb_ij = orca_.periodicIJ( ij.i, ij.j );
+  return PointIJ(glb_ij.i - ix_orca_min_, glb_ij.j - iy_orca_min_);
 }
 
 PointLonLat LocalOrcaGrid::normalised_grid_master_lonlat( idx_t ix, idx_t iy ) const {
