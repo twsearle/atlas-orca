@@ -64,7 +64,7 @@ PointIJ SurroundingRectangle::global_periodic_ij(idx_t ix_glb, idx_t iy_glb) con
     iy_glb_p = -iy_glb_p;
   }
 
-  //// i index periodic east/west boundaries
+  // i index periodic east/west boundaries
   if (ix_glb_p < 0) {
     ix_glb_p = wrap(ix_glb_p + width_x, 0, cfg_.nx_glb);
   }
@@ -105,10 +105,6 @@ SurroundingRectangle::SurroundingRectangle(
   ATLAS_TRACE();
   cfg_.check_consistency();
 
-//  std::ofstream logFile(distribution.type() + "-"
-//      + std::to_string(cfg_.halosize) + "_p"
-//      + std::to_string(cfg_.mypart) + ".log");
-
   // determine rectangle (ix_min_:ix_max_) x (iy_min_:iy_max_) surrounding the nodes on this processor
   ix_min_         = cfg_.nx_glb;
   ix_max_         = 0;
@@ -116,8 +112,6 @@ SurroundingRectangle::SurroundingRectangle(
   iy_max_         = 0;
   nb_real_nodes_owned_by_rectangle = 0;
 
-  // TODO: These "bounds"  are on the imaginary wrapped rectangle including halo and periodic points.
-  // points out of bounds of the reglatlon grid are either in the orca halo points, or are in the halo
   {
     ATLAS_TRACE( "find rectangle bounds" );
     atlas_omp_parallel {
@@ -164,11 +158,6 @@ SurroundingRectangle::SurroundingRectangle(
   nx_ = ix_max_ - ix_min_ + 1;
   ny_ = iy_max_ - iy_min_ + 1;
 
-  //std::cout << "[" << cfg_.mypart << "] ix_min: "     << ix_min_ << std::endl;
-  //std::cout << "[" << cfg_.mypart << "] ix_max: "     << ix_max_ << std::endl;
-  //std::cout << "[" << cfg_.mypart << "] iy_min: "     << iy_min_ << std::endl;
-  //std::cout << "[" << cfg_.mypart << "] iy_max: "     << iy_max_ << std::endl;
-
   // upper estimate for number of nodes
   uint64_t size = ny_ * nx_;
 
@@ -210,15 +199,6 @@ SurroundingRectangle::SurroundingRectangle(
       }
     }
   }
-//  logFile << std::setw(5) << std::setfill('0');
-//  logFile << "[" << cfg_.mypart << "] nx                      = " << nx_ << std::endl;
-//  logFile << "[" << cfg_.mypart << "] ny                      = " << ny_ << std::endl;
-//  logFile << "[" << cfg_.mypart << "] halosize                = " << cfg_.halosize << std::endl;
-//  logFile << "[" << cfg_.mypart << "] ny * nx_                = " << ny_ * nx_ << std::endl;
-//  logFile << "[" << cfg_.mypart << "] ny * (nx_ + 2*halosize) = " << ny_ * (nx_ + 2*cfg_.halosize) << std::endl;
-//  logFile << "[" << cfg_.mypart << "] nb_real_nodes_owned_by_rectangle = " << nb_real_nodes_owned_by_rectangle << std::endl;
-//  logFile << "[" << cfg_.mypart << "] end of SR output" << std::endl;
-//  logFile.close();
 }
 
 }  // namespace atlas::orca::meshgenerator 
