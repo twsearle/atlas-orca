@@ -54,7 +54,7 @@ public:
     int haloSouth() const { return grid_->haloSouth(); }
 
     gidx_t periodicIndex( idx_t i, idx_t j ) const { return grid_->periodicIndex( i, j ); }
-    PointIJ PeriodicIJ( idx_t i, idx_t j ) const { return grid_->PeriodicIJ( idx_t i, idx_t j ); }
+    orca::PointIJ periodicIJ( idx_t i, idx_t j ) const { return grid_->periodicIJ( i, j ); }
 
     void index2ij( gidx_t gidx, idx_t& i, idx_t& j ) const { grid_->index2ij( gidx, i, j ); }
 

@@ -84,7 +84,7 @@ gidx_t Orca::periodicIndex( idx_t i, idx_t j ) const {
     return index( p.i - imin_, p.j - jmin_ );
 }
 
-PointIJ Orca::PeriodicIJ( idx_t i, idx_t j ) const {
+orca::PointIJ Orca::periodicIJ( idx_t i, idx_t j ) const {
     return periodicity_->compute( i + imin_, j + jmin_ );
 }
 

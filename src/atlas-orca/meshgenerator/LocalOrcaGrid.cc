@@ -260,7 +260,7 @@ PointIJ LocalOrcaGrid::orca_haloed_global_grid_ij( idx_t ix, idx_t iy ) const {
   if ( (ij.i > ix_glb_min + nx_orca_glb) || (ij.j > iy_glb_min + ny_orca_glb)
     || (ij.i < ix_glb_min) || (ij.j < iy_glb_min) ) {
     std::cout << "ij.i, ij.j "  << ij.i << ", " << ij.j << std::endl;
-    ij = orca_.periodicIndex(ij.i, ij.j);
+    ij = orca_.periodicIJ(ij.i, ij.j);
     std::cout << "adjusted i, j "  << ij.i << ", " << ij.j << std::endl;
   }
 
