@@ -223,8 +223,11 @@ gidx_t LocalOrcaGrid::master_global_index( idx_t ix, idx_t iy ) const {
 }
 
 PointIJ LocalOrcaGrid::master_global_ij( idx_t ix, idx_t iy ) const {
-  auto ij = this->global_ij(ix, iy);
-  return orca_.periodicIJ( ij.i, ij.j );
+  //return orca_.periodicIJ( ij.i, ij.j );
+  const auto master_idx = this->master_global_index( ix, iy );
+  idx_t ix_glb_master, iy_glb_master;
+  orca_.index2ij( master_idx, ix_glb_master, iy_glb_master );
+  return PointIJ(ix_glb_master, iy_glb_master);
 }
 
 PointLonLat LocalOrcaGrid::normalised_grid_master_lonlat( idx_t ix, idx_t iy ) const {
@@ -267,7 +270,12 @@ PointIJ LocalOrcaGrid::orca_haloed_global_grid_ij( idx_t ix, idx_t iy ) const {
   if ( (ij.i > ix_glb_min + nx_orca_glb) || (ij.j > iy_glb_min + ny_orca_glb)
     || (ij.i < ix_glb_min) || (ij.j < iy_glb_min) ) {
     std::cout << "ij.i, ij.j "  << ij.i << ", " << ij.j << std::endl;
-    ij = orca_.periodicIJ(ij.i, ij.j);
+    gidx_t p_idx = orca_.periodicIndex(ij.i, ij.j);
+    idx_t i, j;
+    orca_.index2ij(p_idx, i, j);
+    ij.i = i;
+    ij.j = j;
+    //ij = orca_.periodicIJ(ij.i, ij.j);
     std::cout << "adjusted i, j "  << ij.i << ", " << ij.j << std::endl;
   }
 
