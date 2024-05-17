@@ -160,7 +160,11 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
       idx_t ii = index( ix, iy );
       if ( is_node.at( ii ) ) {
         is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii ));
-        const auto ij_glb_haloed = this->orca_haloed_global_grid_ij( ix, iy );
+        // this one should wrap when we have a standard halo, but still
+        // preserve the orca halo as though points in the orca are real points
+        // for the purposes of the wrapping. But it isn't working quite right
+        //const auto ij_glb_haloed = this->orca_haloed_global_grid_ij( ix, iy );
+        const auto ij_glb_haloed = this->global_ij( ix, iy );
         // The southern boundary does not contain halo points apart from at the
         // east and west limits.
         if ( (ij_glb_haloed.j >= 0) || (ij_glb_haloed.i < 0) || (ij_glb_haloed.i >= orca_.nx()) ) {
