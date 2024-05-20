@@ -39,10 +39,10 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 //            << " rectangle.iy_max() " << rectangle.iy_max() << std::endl;
 
   // Ensure we include the orca halo points if we are at the edge of the orca grid.
-  if (rectangle.ix_min() <= 0) {
+  if (rectangle.ix_min() == 0) {
     ix_orca_min_ = -orca_.haloWest();
   }
-  if (rectangle.ix_max() >= orca_.nx() - 1) {
+  if (rectangle.ix_max() == orca_.nx()) {
     //ix_orca_max_ = rectangle.ix_max() + orca_.haloEast() - 1;
     ix_orca_max_ = orca_.nx() + orca_.haloEast() - 1;
   }
@@ -50,10 +50,7 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   if (rectangle.iy_min() <= 0) {
     iy_orca_min_ = -orca_.haloSouth();
   }
-  // } else {
-  //   iy_orca_min_ = rectangle.iy_min() - orca_.haloSouth() - 1;
-  // }
-  if (rectangle.iy_max() >= orca_.ny() - 1) {
+  if (rectangle.iy_max() == orca_.ny()) {
     iy_orca_max_ = orca_.ny() + orca_.haloNorth() - 1;
   }
 
