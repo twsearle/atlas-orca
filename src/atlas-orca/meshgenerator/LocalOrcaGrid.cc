@@ -46,6 +46,11 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
     iy_orca_max_ = std::max(rectangle.iy_max(), orca_.ny() + orca_.haloNorth() - 1);
   }
 
+  // TEMPORARY: Prevent wrapping at edge of grid.
+  ix_orca_min_ = std::max(ix_orca_min_, -orca_.haloWest());
+  ix_orca_max_ = std::min(ix_orca_max_, orca_.nx() + orca_.haloEast() - 1);
+  iy_orca_max_ = std::min(iy_orca_max_, orca_.ny() + orca_.haloNorth() - 1);
+
   // Dimensions of the rectangle including the ORCA halo points
   // NOTE: +1 because the size of the dimension is one bigger than index of the last element
   nx_orca_ = ix_orca_max_ - ix_orca_min_ + 1;
