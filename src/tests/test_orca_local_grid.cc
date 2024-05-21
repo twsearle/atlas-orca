@@ -84,10 +84,10 @@ CASE("test surrounding local_orca ") {
       int inode_nonghost = 0;
       for (uint64_t j = 0; j < local_orca.ny(); j++) {
         int iy_glb = local_orca.iy_min() + j;
-        EXPECT(iy_glb < grid.ny() + grid.haloNorth() + grid.haloSouth());
+        EXPECT(iy_glb < grid.ny() + grid.haloNorth() + grid.haloSouth() + halo);
         for (uint64_t i = 0; i < local_orca.nx(); i++) {
           int ix_glb = local_orca.ix_min() + i;
-          EXPECT(ix_glb < grid.nx() + grid.haloWest() + grid.haloEast());
+          EXPECT(ix_glb < grid.nx() + grid.haloWest() + grid.haloEast() + 2*halo);
           auto ii = local_orca.index(i, j);
           indices.emplace_back(ii);
 
