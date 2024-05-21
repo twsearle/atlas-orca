@@ -43,7 +43,6 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
     ix_orca_min_ = -orca_.haloWest();
   }
   if (rectangle.ix_max() == orca_.nx()) {
-    //ix_orca_max_ = rectangle.ix_max() + orca_.haloEast() - 1;
     ix_orca_max_ = orca_.nx() + orca_.haloEast() - 1;
   }
   // no halo at the Southern boundary of orca grid (closed boundary we think?)
@@ -52,6 +51,8 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   }
   if (rectangle.iy_max() == orca_.ny()) {
     iy_orca_max_ = orca_.ny() + orca_.haloNorth() - 1;
+  } else if (rectangle.iy_max() > orca_.ny()) {
+    iy_orca_max_ += orca_.haloNorth();
   }
 
   std::cout << " orca_.nx() " << orca_.nx()
