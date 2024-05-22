@@ -554,8 +554,8 @@ OrcaMeshGenerator::OrcaMeshGenerator( const eckit::Parametrisation& config ) {
     config.get( "partition", mypart_ = mpi::rank() );
     config.get( "partitions", nparts_ = mpi::size() );
     config.get( "halo", halosize_);
-    if (halosize_ < 0 || halosize_ > 1)
-      throw_NotImplemented("Only halo sizes 0 or 1 ORCA grids are currently supported", Here());
+    if (halosize_ < 0)
+      throw_NotImplemented("Halo size must be >= 0", Here());
 }
 
 void OrcaMeshGenerator::generate( const Grid& grid, const grid::Partitioner& partitioner, Mesh& mesh ) const {
