@@ -180,7 +180,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
     //---------------------------------------------------
 
-    if ( serial_distribution ) {
+    if ( serial_distribution && (halosize_ == 0) ) {
         ATLAS_ASSERT_MSG(ix_glb_max == local_orca.ix_max(),
           std::string("Size of the surrounding rectangle x-space doesn't match up with orca-grid x-space: ")
           + std::to_string(ix_glb_max) + " != " + std::to_string(local_orca.ix_max()) );
