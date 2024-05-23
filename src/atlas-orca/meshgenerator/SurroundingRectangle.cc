@@ -174,9 +174,11 @@ SurroundingRectangle::SurroundingRectangle(
       for ( idx_t ix = 0; ix < nx_; ix++ ) {
         idx_t ii = index( ix, iy );
         parts.at( ii ) = partition( ix, iy );
+        PointIJ pij = global_periodic_ij( ix_min_ + ix, iy_min_ + iy );
+        bool periodic_point = ( (pij.i != (ix_min_ + ix) ) || (pij.j != (iy_min_ + iy)) );
         bool halo_found = false;
         int halo_dist = cfg_.halosize;
-        if ((cfg_.halosize > 0) && parts.at( ii ) != cfg_.mypart ) {
+        if ((cfg_.halosize > 0) && ((parts.at( ii ) != cfg_.mypart) || periodic_point) ) {
           // search the surrounding halosize index square for a node on my
           // partition to determine the halo distance
           for (idx_t dhy = -cfg_.halosize; dhy <= cfg_.halosize; ++dhy) {
@@ -195,7 +197,7 @@ SurroundingRectangle::SurroundingRectangle(
             halo.at( ii ) = halo_dist;
           }
         }
-        is_ghost.at( ii ) = ( parts.at( ii ) != cfg_.mypart );
+        is_ghost.at( ii ) = ( (parts.at( ii ) != cfg_.mypart) || periodic_point );
       }
     }
   }
