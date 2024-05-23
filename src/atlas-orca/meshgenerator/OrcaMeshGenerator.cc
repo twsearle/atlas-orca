@@ -177,10 +177,13 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     setGrid( mesh, grid, distribution );
 
     const bool serial_distribution = (SR_cfg.nparts == 1 || distribution.type() == "serial");
+    if ( serial_distribution && (halosize_ > 0) ) {
+      throw_NotImplemented("Halo size should be 0 if using a serial distribution or a single partition", Here());
+    }
 
     //---------------------------------------------------
 
-    if ( serial_distribution && (halosize_ == 0) ) {
+    if ( serial_distribution ) {
         ATLAS_ASSERT_MSG(ix_glb_max == local_orca.ix_max(),
           std::string("Size of the surrounding rectangle x-space doesn't match up with orca-grid x-space: ")
           + std::to_string(ix_glb_max) + " != " + std::to_string(local_orca.ix_max()) );
@@ -554,8 +557,9 @@ OrcaMeshGenerator::OrcaMeshGenerator( const eckit::Parametrisation& config ) {
     config.get( "partition", mypart_ = mpi::rank() );
     config.get( "partitions", nparts_ = mpi::size() );
     config.get( "halo", halosize_);
-    if (halosize_ < 0)
+    if ( halosize_ < 0 ) {
       throw_NotImplemented("Halo size must be >= 0", Here());
+    } 
 }
 
 void OrcaMeshGenerator::generate( const Grid& grid, const grid::Partitioner& partitioner, Mesh& mesh ) const {
@@ -563,7 +567,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Partitioner& par
     ATLAS_ASSERT(valid_distributions.find(partitioner.type()) != valid_distributions.end(),
                  partitioner.type() + " is not an implemented distribution type. "
                  + "Valid types are 'serial', 'checkerboard' or 'equal_regions', 'equal_area'");
-    if (partitioner.type() == "serial" && halosize_ > 1)
+    if (partitioner.type() == "serial" && halosize_ >= 1)
       throw_NotImplemented("halo size must be zero for 'serial' distribution type ORCA grids", Here());
     auto regular_grid = equivalent_regular_grid( grid );
     auto distribution = grid::Distribution( regular_grid, partitioner );
