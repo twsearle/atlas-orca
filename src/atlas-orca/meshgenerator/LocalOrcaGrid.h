@@ -55,6 +55,10 @@ class LocalOrcaGrid {
     uint64_t nb_used_nodes() const {return nb_used_nodes_;}
     // number of cells on this partition
     uint64_t nb_cells() const {return nb_cells_;}
+    // number of ghost cells on this partition
+    uint64_t nb_used_ghost_cells() const {return nb_used_ghost_cells_;}
+    // number of real cells on this paritition
+    uint64_t nb_used_real_cells() const {return nb_used_real_cells_;}
 
     int index( idx_t ix, idx_t iy ) const;
     LocalOrcaGrid( const OrcaGrid& grid, const SurroundingRectangle& rectangle );
@@ -83,6 +87,8 @@ class LocalOrcaGrid {
     uint64_t nb_used_real_nodes_;
     uint64_t nb_used_ghost_nodes_;
     uint64_t nb_cells_;
+    uint64_t nb_used_ghost_cells_;
+    uint64_t nb_used_real_cells_;
     double lon00_;
     util::NormaliseLongitude lon00_normaliser_;
 };

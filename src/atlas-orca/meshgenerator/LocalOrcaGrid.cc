@@ -65,6 +65,8 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   is_ghost.resize( size_, 1 );
   nb_used_real_nodes_ = 0;
   nb_used_ghost_nodes_ = 0;
+  nb_used_real_cells_ = 0;
+  nb_used_ghost_cells_ = 0;
   uint16_t nb_used_halo_nodes = 0;
   {
     //atlas_omp_parallel_for( idx_t iy = 0; iy < ny_; iy++ )
@@ -132,6 +134,11 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
       if ( !is_cell.at(ii) ) {
         ++nb_cells_;
         is_cell.at(ii) = true;
+        if ( is_ghost.at( ii ) ) {
+          ++nb_used_ghost_cells_;
+        } else {
+          ++nb_used_real_cells_;
+        }
       }
     };
     // Loop over all elements to determine which are required

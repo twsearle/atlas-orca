@@ -334,10 +334,11 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
         }
     }
     std::vector<idx_t> cell_index( local_orca.nx()*local_orca.ny() );
-    // loop over nodes and define cells
+    // loop over nodes and define cells, putting non-ghost cells first
     {
         ATLAS_TRACE( "elements" );
         idx_t jcell = 0;
+        idx_t jcell_ghost = local_orca.nb_used_real_cells();
         ATLAS_TRACE_SCOPE( "indexing" );
         for ( idx_t iy = 0; iy < local_orca.ny() - 1; iy++ ) {      // don't loop into ghost/periodicity row
             for ( idx_t ix = 0; ix < local_orca.nx() - 1; ix++ ) {  // don't loop into ghost/periodicity column
@@ -345,7 +346,9 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                 std::stringstream assert_msg;
                 assert_msg << ii << " > " << cell_index.size() << std::endl;
                 ATLAS_ASSERT(ii <  cell_index.size(), assert_msg.str());
-                if ( local_orca.is_ghost[ii] == 0 ) {
+                if ( local_orca.is_ghost[ii] ) {
+                    cell_index[ii] = jcell_ghost++;
+                } else {
                     cell_index[ii] = jcell++;
                 }
             }
