@@ -39,6 +39,7 @@ class LocalOrcaGrid {
     std::vector<int> is_ghost_including_orca_halo;
     std::vector<int> is_ghost;
     std::vector<int> is_node;
+    std::vector<int> is_cell;
     uint64_t size() const {return size_;}
     int ix_min() const {return ix_orca_min_;}
     int ix_max() const {return ix_orca_max_;}

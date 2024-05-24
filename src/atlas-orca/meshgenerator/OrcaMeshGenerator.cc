@@ -358,7 +358,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                 idx_t ii   = local_orca.index( ix, iy );
                 int ix_glb = local_orca.ix_min() + ix;
                 int iy_glb = local_orca.iy_min() + iy;
-                if ( !local_orca.is_ghost[ii] ) {
+                if ( local_orca.is_cell[ii] ) {
                     idx_t jcell = cell_index[ii];
 
                     // define cell corners (local indices)

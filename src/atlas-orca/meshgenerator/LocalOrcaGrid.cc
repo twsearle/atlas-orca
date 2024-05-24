@@ -46,6 +46,11 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
     iy_orca_max_ = std::max(rectangle.iy_max(), orca_.ny() + orca_.haloNorth() - 1);
   }
 
+  // TEMPORARY: Prevent wrapping at edge of grid.
+  ix_orca_min_ = std::max(ix_orca_min_, -orca_.haloWest());
+  ix_orca_max_ = std::min(ix_orca_max_, orca_.nx() + orca_.haloEast() - 1);
+  iy_orca_max_ = std::min(iy_orca_max_, orca_.ny() + orca_.haloNorth() - 1);
+
   // Dimensions of the rectangle including the ORCA halo points
   // NOTE: +1 because the size of the dimension is one bigger than index of the last element
   nx_orca_ = ix_orca_max_ - ix_orca_min_ + 1;
@@ -56,6 +61,7 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   parts.resize( size_, -1 );
   halo.resize( size_, 0 );
   is_node.resize( size_, false );
+  is_cell.resize(size_, false);
   is_ghost.resize( size_, 1 );
   nb_used_real_nodes_ = 0;
   nb_used_ghost_nodes_ = 0;
@@ -107,7 +113,6 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
 
   // determine number of cells and number of nodes
   {
-    std::vector<int> is_cell(size_, false);
     auto mark_node_used = [&]( int ix, int iy ) {
       idx_t ii = index( ix, iy );
       if ( !is_node.at(ii) ) {
@@ -134,7 +139,8 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
     nb_used_nodes_ = 0;
     for ( idx_t iy = 0; iy < ny_orca_-1; iy++ ) {
       for ( idx_t ix = 0; ix < nx_orca_-1; ix++ ) {
-        if ( ! is_ghost[index( ix, iy )]) {
+        idx_t ii = index( ix, iy );
+        if ( halo[ii] <= rectangle.halosize() ) {
           mark_cell_used( ix, iy );
           mark_node_used( ix, iy );
           mark_node_used( ix + 1, iy );
