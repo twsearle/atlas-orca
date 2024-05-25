@@ -274,7 +274,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
                     // grid ij coordinates
                     {
-                      const auto ij_glb = local_orca.global_ij( ix, iy );
+                      const auto ij_glb = local_orca.orca_haloed_global_grid_ij( ix, iy );
                       nodes.ij( inode, XX ) = ij_glb.i;
                       nodes.ij( inode, YY ) = ij_glb.j;
                     }
