@@ -39,18 +39,6 @@ using Config = atlas::util::Config;
 namespace atlas {
 namespace test {
 
-int wrap( idx_t value, idx_t lower, idx_t upper ) {
-  // wrap around coordinate system when out of bounds
-  const idx_t width = upper - lower;
-  if (value < lower) {
-    return wrap(value + width, lower, upper);
-  }
-  if (value > upper) {
-    return wrap(value - width, lower, upper);
-  }
-  return value;
-}
-
 //-----------------------------------------------------------------------------
 
 CASE("test surrounding local_orca ") {
@@ -62,6 +50,9 @@ CASE("test surrounding local_orca ") {
   };
 
   for (int halo = 0; halo <= 2; ++halo) {
+    if ( ( (mpi::size() == 1) && (halo > 0) ) ||
+         ( (mpi::size() == 1) && (distributionName != "serial") ) )
+      continue;
     SECTION(gridname + "_" + distributionName + "_halo" + std::to_string(halo)) {
       auto grid = OrcaGrid(gridname);
       auto partitioner_config = Config();
@@ -125,6 +116,17 @@ CASE("test surrounding local_orca ") {
 
           const auto grid_xy        = local_orca.grid_xy( i, j );
           const auto normed_grid_xy = local_orca.normalised_grid_xy( i, j );
+
+          if (halo == 0) {
+            const auto ij_glb = local_orca.global_ij( i, j );
+            const auto ij_glb_haloed = local_orca.orca_haloed_global_grid_ij( i, j );
+            ASSERT_MSG(ij_glb.i == ij_glb_haloed.i,
+               std::string("ij_glb.i != ij_glb_haloed.i ") + std::to_string(ij_glb.i)
+               + std::string(" != ") + std::to_string(ij_glb_haloed.i));
+            ASSERT_MSG(ij_glb.j == ij_glb_haloed.j,
+               std::string("ij_glb.j != ij_glb_haloed.j ") + std::to_string(ij_glb.j)
+               + std::string(" != ") + std::to_string(ij_glb_haloed.j));
+          }
 
           if (local_orca.parts.at(ii) == cfg.mypart) {
             this_partition.emplace_back(true);
