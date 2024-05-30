@@ -247,13 +247,18 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                    << ", nodes.glb_idx( inode )"
                    << ", nodes.master_glb_idx( inode )" << std::endl;
 
-    summary_file << "SR.nx " << SR.nx()
-                 << "\nSR.ny " << SR.ny()
-                 << "\nSR.ix_min " << SR.ix_min()
-                 << "\nSR.ix_max " << SR.ix_max()
-                 << "\nSR.iy_min " << SR.iy_min()
-                 << "\nSR.iy_max " << SR.iy_max()
-                 << "\nSR.nb_nodes_owned " << SR.nb_real_nodes_owned_by_rectangle
+    summary_file << "local_orca.nx " << local_orca.nx()
+                 << "\nlocal_orca.ny " << local_orca.ny()
+                 << "\nlocal_orca.ix_min " << local_orca.ix_min()
+                 << "\nlocal_orca.ix_max " << local_orca.ix_max()
+                 << "\nlocal_orca.iy_min " << local_orca.iy_min()
+                 << "\nlocal_orca.iy_max " << local_orca.iy_max()
+                 << "\nlocal_orca.nb_used_real_nodes " << local_orca.nb_used_real_nodes()
+                 << "\nlocal_orca.nb_used_ghost_nodes " << local_orca.nb_used_ghost_nodes()
+                 << "\nlocal_orca.nb_used_nodes " << local_orca.nb_used_nodes()
+                 << "\nlocal_orca.nb_cells " << local_orca.nb_cells()
+                 << "\nlocal_orca.nb_used_real_cells " << local_orca.nb_used_real_cells()
+                 << "\nlocal_orca.nb_used_ghost_cells " << local_orca.nb_used_ghost_cells()
                  << std::endl;
 
     {
