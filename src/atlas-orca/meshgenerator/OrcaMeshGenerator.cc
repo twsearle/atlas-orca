@@ -551,8 +551,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     ghost_file << inode << ", " << ii << ", " << nodes.ghost( inode ) << std::endl;
                     xy_file << inode << ", " << ii << ", " << nodes.xy( inode, 0 ) << ", " << nodes.xy( inode, 1 ) << std::endl;
                     lonlat_file << inode << ", " << ii << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 ) << std::endl;
-                    if ((nodes.ij( inode, XX ) > orca_grid.nx()) ||
-                        (nodes.ij( inode, XX ) > orca_grid.nx()/2 &&  nodes.ij( inode, YY ) > orca_grid.ny())) {
+                    if ((nodes.ij( inode, XX ) > orca.nx()) ||
+                        (nodes.ij( inode, XX ) > orca.nx()/2 &&  nodes.ij( inode, YY ) > orca.ny())) {
                     orca_halo_file << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
                                                           << ", " << nodes.part( inode )
                                                           << ", " << nodes.ghost( inode )
@@ -570,8 +570,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                                                           << ", " << nodes.master_glb_idx( inode ) << std::endl;
                     }
                 }
-                }
-                is_node_file << SR.is_node[ii] << std::endl;
+            is_node_file << SR.is_node[ii] << std::endl;
             }
         }
     }
