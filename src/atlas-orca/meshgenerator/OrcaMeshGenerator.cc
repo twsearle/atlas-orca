@@ -228,7 +228,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
     std::vector<idx_t> node_index( local_orca.nx()*local_orca.ny(), -1 );
 
     std::stringstream file_spec;
-    file_spec << orca_grid.name() << "_" << distribution.type() << nparts_ << "_" << mypart_;
+    file_spec << orca_grid.name() << "_" << distribution.type() << nparts_ << "_halo" << halosize_ << "_" << mypart_;
 
     std::ofstream summary_file, partition_file, ghost_file, is_node_file, xy_file, lonlat_file, cells_file, orca_halo_file;
     summary_file.open(file_spec.str() + "_summary.txt");
