@@ -550,7 +550,12 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     partition_file << inode << ", " << ii << ", " << nodes.part( inode ) << std::endl;
                     ghost_file << inode << ", " << ii << ", " << nodes.ghost( inode ) << std::endl;
                     xy_file << inode << ", " << ii << ", " << nodes.xy( inode, 0 ) << ", " << nodes.xy( inode, 1 ) << std::endl;
-                    lonlat_file << inode << ", " << ii << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 ) << std::endl;
+                    idx_t master_i = 0;
+                    idx_t master_j = 0;
+                    gidx_t master_idx = orca.periodicIndex( ix_glb, iy_glb );
+                    orca.index2ij( master_idx, master_i, master_j );
+                    lonlat_file << inode << ", " << ii << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 )
+                                << " " << master_i << ", " << master_j << " " << orca.lonlat(master_i, master_j) << std::endl;
                     if ((nodes.ij( inode, XX ) > orca.nx()) ||
                         (nodes.ij( inode, XX ) > orca.nx()/2 &&  nodes.ij( inode, YY ) > orca.ny())) {
                     orca_halo_file << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
