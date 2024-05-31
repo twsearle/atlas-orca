@@ -369,14 +369,21 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     const auto master_ij = local_orca.master_global_ij( ix, iy );
                     lonlat_file << inode << ", " << ii << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 )
                                 << " " << master_ij << " " << orca_grid.lonlat(master_ij.i, master_ij.j) << std::endl;
-                    if ((nodes.ij( inode, XX ) > orca_grid.nx()) ||
-                        (nodes.ij( inode, XX ) > orca_grid.nx()/2 &&  nodes.ij( inode, YY ) > orca_grid.ny())) {
+                    if ((nodes.ij( inode, XX ) >= orca_grid.nx()) ||
+                        (nodes.ij( inode, XX ) >= orca_grid.nx()/2 && nodes.ij( inode, YY ) >= orca_grid.ny())) {
                         orca_halo_file << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
-                                                          << ", " << nodes.part( inode )
-                                                          << ", " << nodes.ghost( inode )
-                                                          << ", " << nodes.remote_idx( inode )
-                                                          << ", " << nodes.glb_idx( inode )
-                                                          << ", " << nodes.master_glb_idx( inode ) << std::endl;
+                                                << ", " << nodes.part( inode )
+                                                << ", " << nodes.ghost( inode )
+                                                << ", " << nodes.remote_idx( inode )
+                                                << ", " << nodes.glb_idx( inode )
+                                                << ", " << nodes.master_glb_idx( inode )
+                                                << ", " << flags.check( Topology::PERIODIC )
+                                                << ", " << flags.check( Topology::GHOST )
+                                                << ", " << flags.check( Topology::EAST )
+                                                << ", " << flags.check( Topology::WEST )
+                                                << ", " << flags.check( Topology::BC )
+                                                << ", " << flags.check( Topology::LAND )
+                                                << ", " << flags.check( Topology::WATER ) << std::endl;
                     }
                 }
                 is_node_file << local_orca.is_node[ii] << std::endl;

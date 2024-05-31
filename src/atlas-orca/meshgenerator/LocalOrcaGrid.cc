@@ -244,7 +244,7 @@ PointXY LocalOrcaGrid::normalised_grid_xy( idx_t ix, idx_t iy ) const {
       west = lon00_ - 20.;
   }
 
-  if ( ij.i < nx_orca_ / 2 ) {
+  if ( ij.i < orca_.nx() / 2 ) {
     auto lon_first_half_normaliser  = util::NormaliseLongitude{west};
     return PointXY( lon_first_half_normaliser( xy.x() ), xy.y() );
   } else {
@@ -289,12 +289,15 @@ PointLonLat LocalOrcaGrid::normalised_grid_master_lonlat( idx_t ix, idx_t iy ) c
       west = lon00_ - 20.;
   }
 
-  if ( master_ij.i < nx_orca_ / 2 ) {
-    auto lon_first_half_normaliser  = util::NormaliseLongitude{west};
-    return PointLonLat( lon_first_half_normaliser( lonlat.lon() ), lonlat.lat() );
+  if ( master_ij.i < orca_.nx() / 2 ) {
+      auto lon_first_half_normaliser  = util::NormaliseLongitude{west};
+      return PointLonLat( lon_first_half_normaliser( lonlat.lon() ), lonlat.lat() );
   } else {
-    auto lon_second_half_normaliser = util::NormaliseLongitude{lon00_ + 90.};
-    return PointLonLat( lon_second_half_normaliser( lonlat.lon() ), lonlat.lat() );
+      auto lon_second_half_normaliser = util::NormaliseLongitude{lon00_ + 90.};
+      if (master_ij.i == 179)
+          std::cout << "normalise calculation:  " << master_ij.i << " " << lonlat.lon()
+                    << " " << lon_second_half_normaliser( lonlat.lon() ) << std::endl;
+      return PointLonLat( lon_second_half_normaliser( lonlat.lon() ), lonlat.lat() );
   }
 }
 
