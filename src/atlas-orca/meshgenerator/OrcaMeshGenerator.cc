@@ -461,7 +461,18 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
                     // normal calculation
                     orca.xy( ix_glb, iy_glb, _xy );
-                    normalise( _xy );
+                    {
+                        idx_t master_i = 0;
+                        idx_t master_j = 0;
+                        gidx_t master_idx = orca.periodicIndex( ix_glb, iy_glb );
+                        orca.index2ij( master_idx, master_i, master_j );
+                        if ((master_i == 179))
+                            std::cout << "normalise calculation:  " << master_i << " "
+                                      << _xy[LON] << " ";
+                        normalise( _xy );
+                        if ((master_i == 179))
+                            std::cout << _xy[LON] << std::endl;
+                    }
 
                     nodes.xy( inode, LON ) = _xy[LON];
                     nodes.xy( inode, LAT ) = _xy[LAT];
@@ -555,24 +566,22 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     gidx_t master_idx = orca.periodicIndex( ix_glb, iy_glb );
                     orca.index2ij( master_idx, master_i, master_j );
                     lonlat_file << inode << ", " << ii << ", " << nodes.lonlat( inode, 0 ) << ", " << nodes.lonlat( inode, 1 )
-                                << " " << master_i << ", " << master_j << " " << orca.lonlat(master_i, master_j) << std::endl;
-                    if ((nodes.ij( inode, XX ) > orca.nx()) ||
-                        (nodes.ij( inode, XX ) > orca.nx()/2 &&  nodes.ij( inode, YY ) > orca.ny())) {
+                                << " {" << master_i << "," << master_j << "} " << orca.lonlat(master_i, master_j) << std::endl;
+                    if ((nodes.ij( inode, XX ) >= orca.nx()) ||
+                        (nodes.ij( inode, XX ) >= orca.nx()/2 &&  nodes.ij( inode, YY ) >= orca.ny())) {
                     orca_halo_file << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
                                                           << ", " << nodes.part( inode )
                                                           << ", " << nodes.ghost( inode )
                                                           << ", " << nodes.remote_idx( inode )
                                                           << ", " << nodes.glb_idx( inode )
-                                                          << ", " << nodes.master_glb_idx( inode ) << std::endl;
-                    }
-                    if ( ( nodes.master_glb_idx( inode ) == 26575 ) ||
-                         ( nodes.master_glb_idx( inode ) == 363 ) ) {
-                      std::cout << "[" << mypart_ << "] " << inode << ", " << ii << ", " << nodes.ij( inode, XX ) << ", " << nodes.ij( inode, YY )
-                                                          << ", " << nodes.part( inode )
-                                                          << ", " << nodes.ghost( inode )
-                                                          << ", " << nodes.remote_idx( inode )
-                                                          << ", " << nodes.glb_idx( inode )
-                                                          << ", " << nodes.master_glb_idx( inode ) << std::endl;
+                                                          << ", " << nodes.master_glb_idx( inode )
+                                                          << ", " << flags.check( Topology::PERIODIC )
+                                                          << ", " << flags.check( Topology::GHOST )
+                                                          << ", " << flags.check( Topology::EAST )
+                                                          << ", " << flags.check( Topology::WEST )
+                                                          << ", " << flags.check( Topology::BC )
+                                                          << ", " << flags.check( Topology::LAND )
+                                                          << ", " << flags.check( Topology::WATER ) << std::endl;
                     }
                 }
             is_node_file << SR.is_node[ii] << std::endl;

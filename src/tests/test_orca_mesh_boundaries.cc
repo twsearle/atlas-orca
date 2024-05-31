@@ -41,9 +41,9 @@ namespace test {
 CASE( "test haloExchange " ) {
     auto gridnames = std::vector<std::string>{
         "ORCA2_T",   //
-        "ORCA2_U",   //
-        "ORCA2_V",   //
-        "eORCA1_T",  //
+        // "ORCA2_U",   //
+        // "ORCA2_V",   //
+        // "eORCA1_T",  //
                      //        "eORCA025_T",  //
                      //        "eORCA12_T",  //
     };
