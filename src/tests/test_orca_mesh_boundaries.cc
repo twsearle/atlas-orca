@@ -145,6 +145,9 @@ CASE( "test haloExchange " ) {
                             Config("coordinates","ij")|Config("info",true));
                         gmsh.write(mesh);
                         gmsh.write(field);
+                        gmsh.write(mesh.nodes().field( "orca_halo" ));
+                        gmsh.write(mesh.nodes().field( "ij_haloed_i" ));
+                        gmsh.write(mesh.nodes().field( "ij_haloed_j" ));
                         gmsh.write(field2);
                     //}
                     EXPECT_EQ( count, 0 );

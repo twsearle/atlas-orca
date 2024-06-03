@@ -101,6 +101,8 @@ StructuredGrid equivalent_regular_grid( const OrcaGrid& orca ) {
 
 struct Nodes {
     array::ArrayView<idx_t, 2> ij;
+    array::ArrayView<idx_t, 1> ij_haloed_i;
+    array::ArrayView<idx_t, 1> ij_haloed_j;
     array::ArrayView<double, 2> xy;
     array::ArrayView<double, 2> lonlat;
     array::ArrayView<gidx_t, 1> glb_idx;
@@ -111,12 +113,17 @@ struct Nodes {
     array::ArrayView<int, 1> node_flags;
     array::ArrayView<int, 1> water;
     array::ArrayView<gidx_t, 1> master_glb_idx;
+    array::ArrayView<int, 1> orca_halo;
 
     util::detail::BitflagsView<int> flags( idx_t i ) { return util::Topology::view( node_flags( i ) ); }
 
     explicit Nodes( Mesh& mesh ) :
         ij{ array::make_view<idx_t, 2>( mesh.nodes().add(
             Field( "ij", array::make_datatype<idx_t>(), array::make_shape( mesh.nodes().size(), 2 ) ) ) ) },
+        ij_haloed_i{ array::make_view<idx_t, 1>( mesh.nodes().add(
+            Field( "ij_haloed_i", array::make_datatype<idx_t>(), array::make_shape( mesh.nodes().size() ) ) ) ) },
+        ij_haloed_j{ array::make_view<idx_t, 1>( mesh.nodes().add(
+            Field( "ij_haloed_j", array::make_datatype<idx_t>(), array::make_shape( mesh.nodes().size() ) ) ) ) },
         xy{ array::make_view<double, 2>( mesh.nodes().xy() ) },
         lonlat{ array::make_view<double, 2>( mesh.nodes().lonlat() ) },
         glb_idx{ array::make_view<gidx_t, 1>( mesh.nodes().global_index() ) },
@@ -128,7 +135,9 @@ struct Nodes {
         water{ array::make_view<int, 1>( mesh.nodes().add(
             Field( "water", array::make_datatype<int>(), array::make_shape( mesh.nodes().size() ) ) ) ) },
         master_glb_idx{ array::make_view<gidx_t, 1>( mesh.nodes().add( Field(
-            "master_global_index", array::make_datatype<gidx_t>(), array::make_shape( mesh.nodes().size() ) ) ) ) } {}
+            "master_global_index", array::make_datatype<gidx_t>(), array::make_shape( mesh.nodes().size() ) ) ) ) },
+        orca_halo{ array::make_view<int, 1>( mesh.nodes().add( Field(
+            "orca_halo", array::make_datatype<int>(), array::make_shape( mesh.nodes().size() ) ) ) ) } {}
 };
 
 struct Cells {
@@ -308,9 +317,12 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
 
                     // grid ij coordinates
                     {
-                      const auto ij_glb = local_orca.orca_haloed_global_grid_ij( ix, iy );
+                      const auto ij_glb_haloed = local_orca.orca_haloed_global_grid_ij( ix, iy );
+                      const auto ij_glb = local_orca.global_ij( ix, iy );
                       nodes.ij( inode, XX ) = ij_glb.i;
                       nodes.ij( inode, YY ) = ij_glb.j;
+                      nodes.ij_haloed_i( inode ) = ij_glb_haloed.i - ij_glb.i;
+                      nodes.ij_haloed_j( inode ) = ij_glb_haloed.j - ij_glb.j;
                     }
 
                     const auto normalised_xy = local_orca.normalised_grid_xy( ix, iy );
@@ -331,6 +343,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     nodes.part( inode )           = local_orca.parts[ii];
                     nodes.remote_idx( inode )     = inode;
                     nodes.master_glb_idx( inode ) = nodes.glb_idx( inode );
+                    nodes.orca_halo( inode )      = local_orca.orca_halo(ix, iy);
 
                     // flags
                     auto flags = nodes.flags( inode );
@@ -546,11 +559,11 @@ void OrcaMeshGenerator::build_remote_index(Mesh& mesh) const {
 
     // get the indices and partition data
     auto master_glb_idx = array::make_view<gidx_t, 1>( nodes.field( "master_global_index" ) );
+    auto orca_halo      = array::make_view<int, 1>( nodes.field( "orca_halo" ) );
     auto glb_idx        = array::make_view<gidx_t, 1>( nodes.global_index() );
     auto ridx           = array::make_indexview<idx_t, 1>( nodes.remote_index() );
     auto part           = array::make_view<int, 1>( nodes.partition() );
     auto ghost          = array::make_view<int, 1>( nodes.ghost() );
-    auto ij             = array::make_view<idx_t, 2>( nodes.field("ij"));
 
     // find the nodes I want to request the data for
     std::vector<std::vector<gidx_t>> send_uid( mpi_size );
