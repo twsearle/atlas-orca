@@ -175,6 +175,8 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         is_ghost_including_orca_halo.at( ii ) = static_cast<bool>(is_ghost.at( ii ));
         const auto ij_glb_haloed = this->orca_haloed_global_grid_ij( ix, iy );
 
+        // the southern boundary of the grid does not contain ghost points except at
+        // the east-west boundary.
         if ( (ij_glb_haloed.j >= 0) ||
              (ij_glb_haloed.i < 0)  ||
              (ij_glb_haloed.i >= orca_.nx()) ) {
