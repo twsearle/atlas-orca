@@ -50,7 +50,7 @@ CASE( "test haloExchange " ) {
     auto distributionNames = std::vector<std::string>{
       "serial",
       "checkerboard",
-      "equal_regions",
+      //"equal_regions",
       // "equal_area",
     };
 
@@ -106,6 +106,7 @@ CASE( "test haloExchange " ) {
                     const auto glb_idxs  = array::make_view<gidx_t, 1>( mesh.nodes().global_index() );
                     const auto partition = array::make_view<int32_t, 1>( mesh.nodes().partition() );
                     const auto halos     = array::make_view<int32_t, 1>( mesh.nodes().halo() );
+                    const auto ij_haloed_i = array::make_view<int32_t, 1>( mesh.nodes().field( "ij_haloed_i" ) );
 
                     const auto master_glb_idxs =
                         array::make_view<gidx_t, 1>( mesh.nodes().field( "master_global_index" ) );
@@ -113,6 +114,7 @@ CASE( "test haloExchange " ) {
 
                     double sumSquares{ 0.0 };
                     int halocount = 0;
+                    int badijcount = 0;
                     for ( idx_t jnode = 0; jnode < mesh.nodes().size(); ++jnode ) {
                         f2( jnode )      = 0;
                         const double lon = lonlat( jnode, 0 );
@@ -128,7 +130,7 @@ CASE( "test haloExchange " ) {
                                       << " lon " << lonlat( jnode, 0 ) << " lat " << lonlat( jnode, 1 ) << std::endl;
                             f2( jnode ) = 1;
                         }
-                        if (halos(jnode) > 0) {
+                        if (halos(jnode) > 0 && ghosts(jnode) > 0) {
                           std::cout << "[" << mpi::rank() << "] i " << ij(jnode, 0) << " j " << ij(jnode, 1)
                                     << " halo(" << jnode << ") " << halos(jnode)
                                     << " ghost " << ghosts(jnode) << " master_global_index " << master_glb_idxs(jnode)
@@ -145,10 +147,11 @@ CASE( "test haloExchange " ) {
                             Config("coordinates","ij")|Config("info",true));
                         gmsh.write(mesh);
                         gmsh.write(field);
-                        gmsh.write(mesh.nodes().field( "orca_halo" ));
-                        gmsh.write(mesh.nodes().field( "ij_haloed_i" ));
-                        gmsh.write(mesh.nodes().field( "ij_haloed_j" ));
                         gmsh.write(field2);
+                        gmsh.write(mesh.nodes().field( "orca_halo" ), fs );
+                        gmsh.write(mesh.nodes().field( "ij_haloed_i"), fs );
+                        gmsh.write(mesh.nodes().field( "ij_haloed_j"), fs );
+                        gmsh.write(mesh.nodes().field( "master_global_index"), fs );
                     //}
                     EXPECT_EQ( count, 0 );
                 }

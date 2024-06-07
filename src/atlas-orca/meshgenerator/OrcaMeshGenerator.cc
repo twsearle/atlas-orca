@@ -101,8 +101,8 @@ StructuredGrid equivalent_regular_grid( const OrcaGrid& orca ) {
 
 struct Nodes {
     array::ArrayView<idx_t, 2> ij;
-    array::ArrayView<idx_t, 1> ij_haloed_i;
-    array::ArrayView<idx_t, 1> ij_haloed_j;
+    array::ArrayView<int, 1> ij_haloed_i;
+    array::ArrayView<int, 1> ij_haloed_j;
     array::ArrayView<double, 2> xy;
     array::ArrayView<double, 2> lonlat;
     array::ArrayView<gidx_t, 1> glb_idx;
@@ -120,10 +120,10 @@ struct Nodes {
     explicit Nodes( Mesh& mesh ) :
         ij{ array::make_view<idx_t, 2>( mesh.nodes().add(
             Field( "ij", array::make_datatype<idx_t>(), array::make_shape( mesh.nodes().size(), 2 ) ) ) ) },
-        ij_haloed_i{ array::make_view<idx_t, 1>( mesh.nodes().add(
-            Field( "ij_haloed_i", array::make_datatype<idx_t>(), array::make_shape( mesh.nodes().size() ) ) ) ) },
-        ij_haloed_j{ array::make_view<idx_t, 1>( mesh.nodes().add(
-            Field( "ij_haloed_j", array::make_datatype<idx_t>(), array::make_shape( mesh.nodes().size() ) ) ) ) },
+        ij_haloed_i{ array::make_view<int, 1>( mesh.nodes().add(
+            Field( "ij_haloed_i", array::make_datatype<int>(), array::make_shape( mesh.nodes().size() ) ) ) ) },
+        ij_haloed_j{ array::make_view<int, 1>( mesh.nodes().add(
+            Field( "ij_haloed_j", array::make_datatype<int>(), array::make_shape( mesh.nodes().size() ) ) ) ) },
         xy{ array::make_view<double, 2>( mesh.nodes().xy() ) },
         lonlat{ array::make_view<double, 2>( mesh.nodes().lonlat() ) },
         glb_idx{ array::make_view<gidx_t, 1>( mesh.nodes().global_index() ) },
@@ -305,6 +305,8 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                 // node properties
                 if ( local_orca.is_node[ii] ) {
                     idx_t inode = node_index[ii];
+                    nodes.ij_haloed_i( inode ) = 0;
+                    nodes.ij_haloed_j( inode ) = 0;
                     ASSERT(ii < local_orca.is_ghost.size());
                     ASSERT(ii < local_orca.nx() * local_orca.ny());
                     ASSERT(inode < local_orca.nb_used_nodes());
@@ -319,10 +321,10 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     {
                       const auto ij_glb_haloed = local_orca.orca_haloed_global_grid_ij( ix, iy );
                       const auto ij_glb = local_orca.global_ij( ix, iy );
-                      nodes.ij( inode, XX ) = ij_glb.i;
-                      nodes.ij( inode, YY ) = ij_glb.j;
-                      nodes.ij_haloed_i( inode ) = ij_glb_haloed.i - ij_glb.i;
-                      nodes.ij_haloed_j( inode ) = ij_glb_haloed.j - ij_glb.j;
+                      nodes.ij( inode, XX ) = ij_glb_haloed.i;
+                      nodes.ij( inode, YY ) = ij_glb_haloed.j;
+                      nodes.ij_haloed_i( inode ) = static_cast<int>(ij_glb_haloed.i - ij_glb.i);
+                      nodes.ij_haloed_j( inode ) = static_cast<int>(ij_glb_haloed.j - ij_glb.j);
                     }
 
                     const auto normalised_xy = local_orca.normalised_grid_xy( ix, iy );

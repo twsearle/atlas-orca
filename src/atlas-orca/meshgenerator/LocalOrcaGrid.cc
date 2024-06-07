@@ -12,6 +12,7 @@
 
 #include "atlas/util/Topology.h"
 #include "atlas-orca/meshgenerator/LocalOrcaGrid.h"
+#include "atlas/parallel/mpi/mpi.h"
 
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -306,14 +307,6 @@ PointLonLat LocalOrcaGrid::normalised_grid_master_lonlat( idx_t ix, idx_t iy ) c
 // OrcaGrid.periodicIndex as it will only wrap points that are outside of the
 // orca grid halos
 PointIJ LocalOrcaGrid::orca_haloed_global_grid_ij( idx_t ix, idx_t iy ) const {
-  // global grid properties
-  const auto iy_glb_min = -orca_.haloSouth();
-  const auto ix_glb_min = -orca_.haloWest();
-  const auto nx_orca_glb = orca_.nx() + orca_.haloEast() + orca_.haloWest();
-  const auto ny_orca_glb = orca_.ny() + orca_.haloSouth() + orca_.haloNorth();
-  const idx_t glbarray_offset  = -( nx_orca_glb * iy_glb_min ) - ix_glb_min;
-  const idx_t glbarray_jstride = nx_orca_glb;
-
   auto ij = this->global_ij( ix, iy );
 
   ATLAS_ASSERT_MSG( ij.j >= -orca_.haloSouth(),
@@ -322,24 +315,28 @@ PointIJ LocalOrcaGrid::orca_haloed_global_grid_ij( idx_t ix, idx_t iy ) const {
                     std::to_string(orca_.haloSouth()) );
 
   // wrap points outside of orca_grid halo back into the orca grid.
-  if ( (ij.i >= ix_glb_min + nx_orca_glb) || (ij.j >= iy_glb_min + ny_orca_glb)
-    || (ij.i < ix_glb_min) ) {
+  if ( (ij.i < -orca_.haloWest()) ||
+       (ij.i >= orca_.nx() + orca_.haloEast()) ||
+       (ij.j < -orca_.haloSouth()) ||
+       (ij.j >= orca_.ny() + orca_.haloNorth()) ) {
     gidx_t p_idx = orca_.periodicIndex(ij.i, ij.j);
     idx_t i, j;
     orca_.index2ij(p_idx, i, j);
+    //std::cout << "[" << mpi::rank() << "] orca_haloed_global_grid_ij wrapping: " << ij << " to {" << i << ", " << j << "}" << std::endl;
+    //ij = orca_.periodicIJ(ij.i, ij.j);
     ij.i = i;
     ij.j = j;
-    //ij = orca_.periodicIJ(ij.i, ij.j);
+  } else {
   }
 
-  ATLAS_ASSERT_MSG( ij.i >= ix_glb_min,
-                    std::to_string(ij.i) + std::string(" < ") + std::to_string(ix_glb_min) );
-  ATLAS_ASSERT_MSG( ij.j >= iy_glb_min,
-                    std::to_string(ij.j) + std::string(" < ") + std::to_string(iy_glb_min) );
-  ATLAS_ASSERT_MSG( ij.i <= ix_glb_min + nx_orca_glb,
-                    std::to_string(ij.i) + std::string(" > ") + std::to_string(ix_glb_min + nx_orca_glb) );
-  ATLAS_ASSERT_MSG( ij.j <= iy_glb_min + ny_orca_glb,
-                    std::to_string(ij.j) + std::string(" > ") + std::to_string(iy_glb_min + ny_orca_glb) );
+  ATLAS_ASSERT_MSG( ij.i >= -orca_.haloWest(),
+                    std::to_string(ij.i) + std::string(" < ") + std::to_string(-orca_.haloWest()) );
+  ATLAS_ASSERT_MSG( ij.j >= -orca_.haloSouth(),
+                    std::to_string(ij.j) + std::string(" < ") + std::to_string(-orca_.haloSouth()) );
+  ATLAS_ASSERT_MSG( ij.i <= orca_.nx() + orca_.haloEast(),
+                    std::to_string(ij.i) + std::string(" > ") + std::to_string(orca_.nx() + orca_.haloEast()) );
+  ATLAS_ASSERT_MSG( ij.j <= orca_.ny() + orca_.haloNorth(),
+                    std::to_string(ij.j) + std::string(" > ") + std::to_string(orca_.ny() + orca_.haloNorth()) );
   return ij;
 }
 
