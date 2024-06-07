@@ -181,11 +181,11 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
              (ij_glb_haloed.i < 0)  ||
              (ij_glb_haloed.i >= orca_.nx()) ) {
 
-        // this one should wrap when we have a standard halo, but still
-        // preserve the orca halo as though points in the orca are real points
-        // for the purposes of the wrapping. But it isn't working quite right
-        // The southern boundary does not contain halo points apart from at the
-        // east and west limits.
+          // this one should wrap when we have a standard halo, but still
+          // preserve the orca halo as though points in the orca are real points
+          // for the purposes of the wrapping. But it isn't working quite right
+          // The southern boundary does not contain halo points apart from at the
+          // east and west limits.
           if ( (ij_glb_haloed.i > orca_.nx() + orca_.haloWest()) ||
                (ij_glb_haloed.j > orca_.ny() + orca_.haloNorth()) ||
                (ij_glb_haloed.i < - orca_.haloEast()) ||
@@ -418,7 +418,7 @@ bool LocalOrcaGrid::water( idx_t ix, idx_t iy ) const {
   return orca_.water( ij_glb.i, ij_glb.j );
 }
 bool LocalOrcaGrid::orca_halo( idx_t ix, idx_t iy ) const {
-  const auto ij_glb = this->global_ij( ix, iy );
+  const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
   if ( ((ij_glb.i < 0) && (ij_glb.i >= -orca_.haloWest())) ||
        ((ij_glb.i >= orca_.nx()) && (ij_glb.i < (orca_.nx() + orca_.haloEast()))) ||
        ((ij_glb.j < 0) && (ij_glb.j >= -orca_.haloSouth())) ||
