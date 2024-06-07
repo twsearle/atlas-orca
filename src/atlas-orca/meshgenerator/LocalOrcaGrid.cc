@@ -116,6 +116,11 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         parts.at( ii ) = rectangle.parts.at( reg_ii );
         halo.at( ii ) = rectangle.halo.at( reg_ii );
         is_ghost.at( ii ) = rectangle.is_ghost.at( reg_ii );
+        // If this is a periodic point, then it is always a ghost point.
+        const auto ij_wrapped = this->orca_haloed_global_grid_ij( ix, iy );
+        if ( (ij_wrapped.i != ij_glb_haloed.i) || (ij_wrapped.j != ij_glb_haloed.j) ) {
+          is_ghost.at(ii) = 1;
+        }
       }
     }
   }
