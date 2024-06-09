@@ -84,9 +84,9 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         idx_t ix_reg = ij_glb_haloed.i;
         idx_t iy_reg = ij_glb_haloed.j;
         idx_t reg_ii = -1;
-        // Are we in the ORCA halo? If so we use those points instead of wrapping to the
-        // other side of the grid.
-        if ( this->orca_halo( ix, iy ) ) {
+        // Are we in the ORCA edge points? If so we use those points instead of wrapping
+        // to the other side of the grid.
+        if ( this->orca_edge( ix, iy ) ) {
           // Find the information for the closest node to the ORCA halo point
           // that is inside the grid.
           idx_t ix_reg_h = ix_reg;
@@ -422,7 +422,7 @@ bool LocalOrcaGrid::water( idx_t ix, idx_t iy ) const {
 
   return orca_.water( ij_glb.i, ij_glb.j );
 }
-bool LocalOrcaGrid::orca_halo( idx_t ix, idx_t iy ) const {
+bool LocalOrcaGrid::orca_edge( idx_t ix, idx_t iy ) const {
   const auto ij_glb = this->orca_haloed_global_grid_ij( ix, iy );
   if ( ((ij_glb.i < 0) && (ij_glb.i >= -orca_.haloWest())) ||
        ((ij_glb.i >= orca_.nx()) && (ij_glb.i < (orca_.nx() + orca_.haloEast()))) ||
