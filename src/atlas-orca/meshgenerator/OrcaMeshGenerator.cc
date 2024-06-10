@@ -345,7 +345,7 @@ void OrcaMeshGenerator::generate( const Grid& grid, const grid::Distribution& di
                     nodes.part( inode )           = local_orca.parts[ii];
                     nodes.remote_idx( inode )     = inode;
                     nodes.master_glb_idx( inode ) = nodes.glb_idx( inode );
-                    nodes.orca_halo( inode )      = local_orca.orca_halo(ix, iy);
+                    nodes.orca_halo( inode )      = local_orca.orca_edge(ix, iy);
 
                     // flags
                     auto flags = nodes.flags( inode );
