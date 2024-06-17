@@ -43,7 +43,6 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
   if (rectangle.iy_min() <= 0) {
     iy_orca_min_ = -orca_.haloSouth();
   }
-
   if (rectangle.iy_max() >= orca_.ny() - 1) {
     iy_orca_max_ = std::max(rectangle.iy_max(), orca_.ny() + orca_.haloNorth() - 1);
   }
@@ -119,7 +118,7 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
         // If this is a periodic point, then it is always a ghost point.
         const auto ij_wrapped = this->orca_haloed_global_grid_ij( ix, iy );
         if ( (ij_wrapped.i != ij_glb_haloed.i) || (ij_wrapped.j != ij_glb_haloed.j) ) {
-          is_ghost.at(ii) = 1;
+          is_ghost.at( ii ) = 1;
         }
       }
     }
