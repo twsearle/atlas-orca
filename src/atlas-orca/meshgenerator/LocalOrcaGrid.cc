@@ -158,14 +158,11 @@ LocalOrcaGrid::LocalOrcaGrid(const OrcaGrid& grid, const SurroundingRectangle& r
     nb_used_nodes_ = 0;
     for ( idx_t iy = 0; iy < ny_orca_-1; iy++ ) {
       for ( idx_t ix = 0; ix < nx_orca_-1; ix++ ) {
-        idx_t ii = index( ix, iy );
-        if ( halo[ii] <= rectangle.halosize() ) {
-          mark_cell_used( ix, iy );
-          mark_node_used( ix, iy );
-          mark_node_used( ix + 1, iy );
-          mark_node_used( ix + 1, iy + 1 );
-          mark_node_used( ix, iy + 1 );
-        }
+        mark_cell_used( ix, iy );
+        mark_node_used( ix, iy );
+        mark_node_used( ix + 1, iy );
+        mark_node_used( ix + 1, iy + 1 );
+        mark_node_used( ix, iy + 1 );
       }
     }
   }
